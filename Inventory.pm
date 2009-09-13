@@ -24,6 +24,18 @@ my $dbname = shift;
                             count integer,
                             unique (barcode, sku))") || die "Error creating inventory table: ".$DBI::errstr;
     $dbh->do("create index if not exists inventory_sku_index on inventory (sku)") || die "Error creating sku index: ".$DBI::errstr;
+
+    $dbh->do("create table if not exists sales_order
+                     (sales_order_id varchar NOT NULL primary key,
+                      date datetime default CURRENT_TIMESTAMP)") || die "Error creating sales_order table: ".$DBI::errstr;
+
+    $dbh->do("create table if not exists sales_order_items
+                     (sales_order_id integer NOT NULL REFERENCES sales_order(sales_order_id),
+                      barcode varchar NOT NULL REFERENCES inventory(barcode),
+                      count integer NOT NULL,
+                      primary key (sales_order_id, barcode))") || die "Error creating sales_order_items table: ".$DBI::errstr;
+    $dbh->do("create index if not exists sales_order_items_barcode_index on sales_order_items(barcode)")
+        || die "Error creating sales_order index: ".$DBI::errstr;
  
     my $self = { dbh => $dbh };
     bless $self,$class;
@@ -181,7 +193,7 @@ sub adjust_count_by_barcode {
 
     my $item = $self->lookup_by_barcode($barcode);
     unless ($item) {
-        Carp::confess("No item with barcode $barcode");
+        die "No item with barcode $barcode\n";
         return;
     }
     my $new_count = $item->{'count'} + $adjustment;
@@ -198,7 +210,7 @@ sub adjust_count_by_barcode {
 
     $sth->finish;
 
-    return $new_count;
+    return $new_count || '0 but true';
 }
 
 sub set_count_by_barcode {
@@ -206,7 +218,7 @@ sub set_count_by_barcode {
 
     my $item = $self->lookup_by_barcode($barcode);
     unless ($item) {
-        Carp::confess("No item with barcode $barcode");
+        die "No item with barcode $barcode\n";
         return;
     }
     my $sth = $self->dbh->prepare_cached("update inventory set count = ? where barcode = ?");
@@ -222,12 +234,139 @@ sub set_count_by_barcode {
 
     $sth->finish;
 
-    return $count;
+    return $count || '0 but true';
 }
 
 sub disconnect {
    my $self = shift;
    $self->dbh->disconnect();
+}
+
+sub commit {
+    my $self = shift;
+    $self->dbh->commit();
+}
+
+sub rollback {
+    my $self = shift;
+    $self->dbh->rollback();
+}
+
+sub create_order {
+    my($self,$order_number) = @_;
+    
+    unless ($order_number) {
+        die "order number is required\n";
+        return;
+    }
+
+    my $sth = $self->dbh->prepare_cached('insert into sales_order (sales_order_id) values (?)');
+    unless ($sth) {
+        Carp::confess('prepare for create_order failed: ',$DBI::errstr);
+        $sth->finish;
+        return;
+    }
+
+    unless($sth->execute($order_number)) {
+        Carp::confess("execute for create_order failed (order_number $order_number: ".$DBI::errstr);
+        $sth->finish;
+        return;
+    }
+
+    $sth->finish;
+
+    return bless {_db => $self, _order_number => $order_number}, 'Inventory::Order';
+}
+
+sub _create_order_line_item {}
+
+
+package Inventory::Order;
+
+sub _db {
+    return shift->{'_db'};
+}
+
+sub order_number {
+    return shift->{'_order_number'};
+}
+
+sub add_item_by_barcode {
+    my($self, $barcode) = @_;
+
+    no warnings 'uninitialized';
+    $self->{$barcode}++;
+}
+
+sub barcodes {
+    my $self = shift;
+
+    my @list;
+    foreach my $key ( keys %$self ) {
+        next if (substr($key, 0, 1) eq '_');  # skip keys starting with _
+        push @list, $key;
+    }
+    return @list;
+}
+
+sub verify_items {
+    my $self = shift;
+
+    my @barcodes = $self->barcodes();
+
+    my $db = $self->_db;
+    foreach my $barcode ( @barcodes ) {
+        my $item = $db->lookup_by_barcode();
+        return unless $item;
+ 
+        # make sure there's room in the inventory
+        # NOTE: there's a race condition between verify and save
+        # if there are 2 or more users.  Shouldn't be a problem for this use.
+        return unless ($item->{'count'} >= $self->{$barcode});
+    }
+
+    return 1;
+}
+
+sub problems {
+    my $self = shift;
+
+    my @barcodes = $self->barcodes();
+
+    my %problems;
+    foreach my $barcode ( @barcodes ) {
+    }
+}
+
+sub save {
+    my $self = shift;
+
+    return unless ($self->verify_items);
+
+    my $db= $self ->_db;
+    my @barcodes = $self->barcodes();
+    foreach my $barcode ( @barcodes ) {
+        unless ($db->adjust_count_by_barcode(0 - $self->{$barcode})) {
+            die "count below 0 for barcode $barcode";
+        }
+    }
+
+    my $sth = $self->dbh->prepare_cached('insert into sales_order_items (sales_order_id,barcode,count) values (?,?,?)');
+    unless ($sth) {
+        die 'prepare for save-items failed: '.$DBI::errstr;
+        $sth->finish;
+        return;
+    }
+
+    foreach my $barcode ( @barcodes ) {
+        unless($sth->execute($self->{'_order_number'}, $barcode, $self->{$barcode})) {
+            die sprintf("execute for create_order failed (order_number %s): %s", $self->{'_order_number'}, $DBI::errstr);
+        }
+    }
+
+    $sth->finish;
+
+    return 1;
 }
 
 1;
