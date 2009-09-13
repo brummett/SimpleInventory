@@ -26,11 +26,13 @@ unless ($db) {
 
 $SIG{'INT'} = sub {
     print "Exiting without saving changes...\n";
-    $db->dbh->rollback;
+    $db->rollback;
     exit;
 };
 
 $|=1;
+my %new_items;
+
 while(1) {
     print "Scan...";
 
@@ -44,24 +46,34 @@ while(1) {
         $db->adjust_count_by_barcode($barcode,1);
 
     } else {
-        print "\cG";
-       if ($test_import) {
-           print STDERR "New item barcode $barcode\n";
-           next;
-        }
-        print "*** New item\nSKU: ";
-        my $sku = <STDIN>;
-        chomp $sku;
+        $new_items{$barcode}++;
+    }
 
-        print "Description: ";
-        my $desc = <STDIN>;
-        chomp $desc;
+}
 
-        $db->create_item(barcode => $barcode,
-                         sku => $sku,
-                         desc => $desc,
-                         count => 1,
-                        );
+if (my $new_items_count = scalar(keys %new_items)) {
+    print STDERR "There were $new_items_count new items\n";
+
+    foreach my $barcode ( keys %new_items ) {
+        my $count = $new_items{$barcode};
+        print STDERR "\nNew item barcode $barcode ($count items)\n";
+        if ($test_import) {
+            next;
+         }
+
+         print "SKU: ";
+         my $sku = <STDIN>;
+         chomp $sku;
+
+         print "Description: ";
+         my $desc = <STDIN>;
+         chomp $desc;
+
+         $db->create_item(barcode => $barcode,
+                          sku => $sku,
+                          desc => $desc,
+                          count => 1,
+                         );
     }
 }
 

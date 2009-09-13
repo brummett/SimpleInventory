@@ -356,6 +356,12 @@ sub barcodes {
     return @list;
 }
 
+sub remove_barcode {
+    my($self,$barcode) = @_;
+
+    delete $self->{$barcode};
+}
+
 #sub verify_items {
 #    my $self = shift;
 #
@@ -377,6 +383,8 @@ sub barcodes {
 
 sub save {
     my $self = shift;
+
+    return if ($self->{'_saved'});
 
 #    return unless ($self->verify_items);
 
@@ -403,6 +411,7 @@ sub save {
 
     $sth->finish;
 
+    $self->{'_saved'} = 1;
     return 1;
 }
 
