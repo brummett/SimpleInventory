@@ -25,17 +25,17 @@ my $dbname = shift;
                             unique (barcode, sku))") || die "Error creating inventory table: ".$DBI::errstr;
     $dbh->do("create index if not exists inventory_sku_index on inventory (sku)") || die "Error creating sku index: ".$DBI::errstr;
 
-    $dbh->do("create table if not exists sales_order
-                     (sales_order_id varchar NOT NULL primary key,
-                      date datetime default CURRENT_TIMESTAMP)") || die "Error creating sales_order table: ".$DBI::errstr;
+    $dbh->do("create table if not exists item_transaction
+                     (item_transaction_id varchar NOT NULL primary key,
+                      date datetime default CURRENT_TIMESTAMP)") || die "Error creating item_transaction table: ".$DBI::errstr;
 
-    $dbh->do("create table if not exists sales_order_items
-                     (sales_order_id integer NOT NULL REFERENCES sales_order(sales_order_id),
+    $dbh->do("create table if not exists item_transaction_detail
+                     (item_transaction_id integer NOT NULL REFERENCES item_transaction(item_transaction_id),
                       barcode varchar NOT NULL REFERENCES inventory(barcode),
                       count integer NOT NULL,
-                      primary key (sales_order_id, barcode))") || die "Error creating sales_order_items table: ".$DBI::errstr;
-    $dbh->do("create index if not exists sales_order_items_barcode_index on sales_order_items(barcode)")
-        || die "Error creating sales_order index: ".$DBI::errstr;
+                      primary key (item_transaction_id, barcode))") || die "Error creating item_transaction_detail table: ".$DBI::errstr;
+    $dbh->do("create index if not exists item_transaction_detail_barcode_index on item_transaction_detail(barcode)")
+        || die "Error creating item_transaction index: ".$DBI::errstr;
  
     my $self = { dbh => $dbh };
     bless $self,$class;
@@ -259,43 +259,43 @@ sub rollback {
 }
 
 sub create_order {
-    my($self,$sales_order_id) = @_;
+    my($self,$item_transaction_id) = @_;
     
-    unless ($sales_order_id) {
+    unless ($item_transaction_id) {
         die "order number is required\n";
         return;
     }
 
-    my $sth = $self->dbh->prepare_cached('insert into sales_order (sales_order_id) values (?)');
+    my $sth = $self->dbh->prepare_cached('insert into item_transaction (item_transaction_id) values (?)');
     unless ($sth) {
         Carp::confess('prepare for create_order failed: ',$DBI::errstr);
         $sth->finish;
         return;
     }
 
-    unless($sth->execute($sales_order_id)) {
-        die "execute for create_order failed (sales_order_id $sales_order_id: ".$DBI::errstr;
+    unless($sth->execute($item_transaction_id)) {
+        die "execute for create_order failed (item_transaction_id $item_transaction_id: ".$DBI::errstr;
         $sth->finish;
         return;
     }
 
     $sth->finish;
 
-    return bless {_db => $self, _sales_order_id => $sales_order_id}, 'Inventory::Order';
+    return bless {_db => $self, _item_transaction_id => $item_transaction_id}, 'Inventory::Order';
 }
 
 sub get_order_detail {
-    my($self, $sales_order_id) = @_;
+    my($self, $item_transaction_id) = @_;
 
-    my $sth = $self->dbh->prepare_cached('select date from sales_order where sales_order_id = ?');
+    my $sth = $self->dbh->prepare_cached('select date from item_transaction where item_transaction_id = ?');
     unless ($sth) {
        Carp::confess('prepare for get_order_detail failed: '.$DBI::errstr);
        $sth->finish;
        return;
     }
 
-    unless ($sth->execute($sales_order_id)) {
-        Carp::confess("execute for get_order_detail failed (order number $sales_order_id): ".$DBI::errstr);
+    unless ($sth->execute($item_transaction_id)) {
+        Carp::confess("execute for get_order_detail failed (order number $item_transaction_id): ".$DBI::errstr);
         $sth->finish;
         return;
     }
@@ -303,17 +303,17 @@ sub get_order_detail {
     my @row = $sth->fetchrow_array();
     return unless @row;
 
-    my $order = { _sales_order_id => $sales_order_id, _date => $row[0] };
+    my $order = { _item_transaction_id => $item_transaction_id, _date => $row[0] };
 
-    $sth = $self->dbh->prepare_cached('select barcode, count from sales_order_items where sales_order_id = ?');
+    $sth = $self->dbh->prepare_cached('select barcode, count from item_transaction_detail where item_transaction_id = ?');
     unless ($sth) {
        Carp::confess('prepare for get_order_detail items failed: '.$DBI::errstr);
        $sth->finish;
        return;
     }
 
-    unless ($sth->execute($sales_order_id)) {
-        Carp::confess("execute for get_order_detail items failed (order number $sales_order_id): ".$DBI::errstr);
+    unless ($sth->execute($item_transaction_id)) {
+        Carp::confess("execute for get_order_detail items failed (order number $item_transaction_id): ".$DBI::errstr);
         $sth->finish;
         return;
     }
@@ -334,8 +334,8 @@ sub _db {
     return shift->{'_db'};
 }
 
-sub sales_order_id {
-    return shift->{'_sales_order_id'};
+sub item_transaction_id {
+    return shift->{'_item_transaction_id'};
 }
 
 sub add_item_by_barcode {
@@ -362,31 +362,10 @@ sub remove_barcode {
     delete $self->{$barcode};
 }
 
-#sub verify_items {
-#    my $self = shift;
-#
-#    my @barcodes = $self->barcodes();
-#
-#    my $db = $self->_db;
-#    foreach my $barcode ( @barcodes ) {
-#        my $item = $db->lookup_by_barcode($barcode);
-#        return unless $item;
-# 
-#        # make sure there's room in the inventory
-#        # NOTE: there's a race condition between verify and save
-#        # if there are 2 or more users.  Shouldn't be a problem for this use.
-#        return unless ($item->{'count'} >= $self->{$barcode});
-#    }
-#
-#    return 1;
-#}
-
 sub save {
     my $self = shift;
 
     return if ($self->{'_saved'});
-
-#    return unless ($self->verify_items);
 
     my $db= $self ->_db;
     my @barcodes = $self->barcodes();
@@ -394,7 +373,7 @@ sub save {
         $db->adjust_count_by_barcode($barcode, $self->{$barcode});
     }
 
-    my $sth = $db->dbh->prepare_cached('insert into sales_order_items (sales_order_id,barcode,count) values (?,?,?)');
+    my $sth = $db->dbh->prepare_cached('insert into item_transaction_detail (item_transaction_id,barcode,count) values (?,?,?)');
     unless ($sth) {
         die 'prepare for save-items failed: '.$DBI::errstr;
         $sth->finish;
@@ -404,8 +383,8 @@ sub save {
     foreach my $barcode ( @barcodes ) {
         next unless ($self->{$barcode} ); # Skip items with 0 count
         my $count = $self->{$barcode};
-        unless($sth->execute($self->{'_sales_order_id'}, $barcode, $count)) {
-            die sprintf("execute for create_order failed (sales_order_id %s): %s", $self->{'_sales_order_id'}, $DBI::errstr);
+        unless($sth->execute($self->{'_item_transaction_id'}, $barcode, $count)) {
+            die sprintf("execute for create_order failed (item_transaction_id %s): %s", $self->{'_item_transaction_id'}, $DBI::errstr);
         }
     }
 
