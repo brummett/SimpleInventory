@@ -69,6 +69,35 @@ sub dbh {
     return $_[0]->{'dbh'};
 }
 
+sub lookup_by_desc_like {
+    my($self,$desc) = @_;
+
+    $desc = "\%$desc\%";
+    my $sth = $self->dbh->prepare_cached('select barcode, sku, desc, count from inventory where desc like ?');
+    unless ($sth)  {
+        print STDERR "Error preparing lookup_by_barcode: ".$DBI::errstr."\n";
+        $sth->finish;
+        return;
+    }
+
+    unless ($sth->execute($desc)) {
+        print STDERR "Error executing lookup_by_barcode: ".$DBI::errstr."\n";
+        $sth->finish;
+        return;
+    }
+
+    my @retval;
+    while(my @row = $sth->fetchrow_array()) {
+        my %item;
+        @item{'barcode','sku','desc','count'} = @row;
+        push @retval, \%item;
+    }
+
+    $sth->finish();
+    return @retval;
+}
+    
+
 sub lookup_by_barcode {
     my($self,$barcode) = @_;
 

@@ -1,0 +1,32 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Inventory;
+
+my $db = Inventory->connect();
+
+$|=1;
+print "Looking up items...\n";
+
+print "Barcode, sku or partial desc: ";
+while(<>) {
+    chomp;
+
+    my $thing = $_;
+    my @items = ( $db->lookup_by_sku($thing),
+                  $db->lookup_by_barcode($thing),
+                  $db->lookup_by_desc_like($thing) );
+
+    my %shown;
+    foreach my $item ( @items )  {
+        next if ($shown{$item->{'barcode'}}++);
+
+        printf("sku %s count %d barcode %s desc %s\n",
+               @$item{'sku','count','barcode','desc'});
+    }
+    print "\nBarcode, sku or partial desc: ";
+}
+
+    
