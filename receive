@@ -85,6 +85,8 @@ if (my $new_items_count = scalar(keys %new_items)) {
     }
 }
 
+$order->save();
+
 if ($test_import) {
     $db->dbh->rollback();
     print "Rolling back from test import...\n";
