@@ -1,0 +1,81 @@
+#!/usr/bin/perl
+
+use IO::File;
+use Inventory;
+
+use strict;
+use warnings;
+
+unless (@ARGV == 1) {
+    print STDERR "usage: $0   (price_list_file_name)  " . '>' . "  (output_file_name)\n";
+    print STDERR "\nThe price list file should be tab seperated\nThe output file will be tab seperated\n";
+    exit;
+}
+
+
+my $inventory = Inventory->connect();
+my $all_items_list = $inventory->get_all_inventory();
+
+my %inventory;
+while(my $item = shift @$all_items_list) {
+    last unless $item;
+
+    next if $item->{'barcode'} =~ m/^\D/;  # Skip avocare barcodes
+
+    $inventory{$item->{'sku'}} = $item;
+}
+
+my $f = &open_file($ARGV[0]);
+while(my $line = $f->getline()) {
+    last unless(defined $line);
+
+    my @line = split(/\t/, $line);
+    my($sku,$retail) = @line[0,8];
+    next unless($sku && $retail);
+
+    # open office saves these files with quotes around some things, extra spaces at the start
+    # or end sometimes, and their SKU number has a - in the middle
+    $sku =~ s/^\'\s*//;
+    $sku =~ s/\s*\'$//;
+    $sku =~ s/\-//;
+
+    
+    $retail =~ s/^\'\s*//;
+    $retail =~ s/\s*\'$//;
+    $retail =~ s/\$//;
+ 
+    next unless $inventory{$sku};
+
+    my $details = $inventory{$sku};
+    
+    my $tax = $retail * 0.0675;
+    $details->{'retail'} = '$' . $retail;
+    $details->{'website'} = sprintf('$%.2f', $retail * 0.89);
+    $details->{'ebaystore'} = sprintf('$%.2f', $retail * 0.85 + $tax);
+    $details->{'ebayauction'} = sprintf('$%.2f', $retail * 0.80 + $tax);
+}
+$f->close();
+
+my @columns = qw( sku desc retail website ebaystore ebayauction );
+print join("\t", @columns),"\n";
+foreach my $item ( values %inventory ) {
+#    next unless $item->{'retail'};
+    no warnings 'uninitialized';
+    print join("\t", @$item{@columns}),"\n";
+}
+
+    
+    
+
+    
+
+
+sub open_file {
+    my $name = shift;
+    my $f = IO::File->new($name);
+    unless($f) {
+        print STDERR "Can't open $name: $!\n";
+        exit(1);
+    }
+    return $f;
+}
