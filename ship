@@ -54,8 +54,9 @@ while(1) {
             print STDERR "New item barcode $barcode\n";
             next;
         }
-        print "*** That was an unknown item...\n";
+        die  "*** That was an unknown item...\n";
 
+        # Don't do below... we're now dying on an unknown item
         print "Enter the SKU number: ";
         my $sku = <STDIN>;
         chomp $sku;
