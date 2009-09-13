@@ -33,6 +33,10 @@ $SIG{'INT'} = sub {
 $|=1;
 my %new_items;
 
+print "Receive order number: ";
+chomp(my $order_number = <STDIN>);
+my $order = $db->create_order($order_number, 'receive');
+
 while(1) {
     print "Scan...";
 
@@ -43,7 +47,7 @@ while(1) {
     my $item = $db->lookup_by_barcode($barcode);
 
     if ($item) {
-        $db->adjust_count_by_barcode($barcode,1);
+        $order->receive_item_by_barcode($barcode);
 
     } else {
         $new_items{$barcode}++;
@@ -72,8 +76,12 @@ if (my $new_items_count = scalar(keys %new_items)) {
          $db->create_item(barcode => $barcode,
                           sku => $sku,
                           desc => $desc,
-                          count => 1,
+                          count => 0,
                          );
+
+        for(my $i = 0; $i < $count; $i++) {
+            $order->receive_item_by_barcode($barcode);
+        }
     }
 }
 

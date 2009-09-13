@@ -25,65 +25,67 @@ unless ($db) {
 
 $SIG{'INT'} = sub {
     print "Exiting without saving changes...\n";
-    $db->dbh->rollback;
+    $db->rollback;
     exit;
 };
 
 $|=1;
+
+my $order;
+
+if ($0 =~ m/expire_items$/) {
+    print "\cG\n*** Removing expired items from the database!\n\n";
+    my $order_number = 'Removing expired items ' . scalar(localtime);
+    $order = $db->create_order($order_number,'expired');
+
+} else {
+    print "Order number: ";
+    my $order_number = <STDIN>;
+    chomp $order_number;
+    $order = $db->create_order($order_number,'sale');
+}
+
 while(1) {
-    print "Scan...";
+    print "Scan item...";
 
     my $barcode = <STDIN>;
     chomp $barcode if $barcode;
     last unless $barcode;
 
-    my $item = $db->lookup_by_barcode($barcode);
+    $order->sell_item_by_barcode($barcode);
+}
 
-    if ($item) {
-        printf("sku: %s %s\n",$item->{'sku'}, $item->{'desc'});
-        if ($item->{'count'} < 1) {
-            print "\cG";
-            print "This will make the count negative for barcode $barcode (current count ",$item->{'count'},")\n";
-        }
+my $problems = 0;
+until( eval { $order->save }) {
+    $problems++;
 
-        $db->adjust_count_by_barcode($barcode,-1);
-        
+    print STDERR "\cG\nFound a problem: $@\n";
+
+    if ($@ =~ m/Count below 0 for barcode (\S+)/) {
+        $order->remove_barcode($1);
+
+    } elsif ($@ =~ m/No item with barcode (\S+)/) {
+        $order->remove_barcode($1);
+
     } else {
-        print "\cG";
-        if ($test_import) {
-            print STDERR "New item barcode $barcode\n";
-            next;
-        }
-        die  "*** That was an unknown item...\n";
-
-        # Don't do below... we're now dying on an unknown item
-        print "Enter the SKU number: ";
-        my $sku = <STDIN>;
-        chomp $sku;
-
-        print "Description: ";
-        my $desc = <STDIN>;
-        chomp $desc;
-
-        print "Quantity on hand (including the one now shipping out): ";
-        my $count = <STDIN>;
-        chomp $count;
-        $count -= 1;
-
-        $db->create_item(barcode => $barcode,
-                         sku => $sku,
-                         desc => $desc,
-                         count => $count,
-                        );
+        print STDERR "Don't know how to continue with that error...\n";
+        last;
     }
 }
 
-if ($test_import) {
-    $db->dbh->rollback();
-    print "Rolling back changes from test import\n";
+if ($problems) {
+    my @barcodes = $order->barcodes();
+    print STDERR scalar(@barcodes), " other items had no problems\n";
+    print STDERR "Reversing all changes and exiting\n";
+    $db->rollback();
+} elsif ($test_import) {
+    $db->rollback();
+    print STDERR "Rolling back changes from test import\n";
 } else {
-    $db->dbh->commit();
-    print "Changes saved!\n";
+    $db->commit();
+    print "\nSaving changes!\n";
 }
+
+$db->disconnect();
 
 

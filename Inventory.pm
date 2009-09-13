@@ -17,6 +17,16 @@ my $dbname = shift;
         exit 1;
     }
 
+    $class->_initialize_db($dbh);
+
+    my $self = { dbh => $dbh };
+    bless $self,$class;
+    return $self;
+}
+
+sub _initialize_db {
+    my($self,$dbh) = @_;
+
     $dbh->do("create table if not exists inventory
                            (barcode varchar primary key,
                             sku varchar,
@@ -25,9 +35,15 @@ my $dbname = shift;
                             unique (barcode, sku))") || die "Error creating inventory table: ".$DBI::errstr;
     $dbh->do("create index if not exists inventory_sku_index on inventory (sku)") || die "Error creating sku index: ".$DBI::errstr;
 
+    $dbh->do("create table if not exists item_transaction_type
+                     (item_transaction_type_id integer PRIMARY KEY,
+                      name varchar)") || die "Error creating item_transaction_type table";
+
     $dbh->do("create table if not exists item_transaction
                      (item_transaction_id varchar NOT NULL primary key,
-                      date datetime default CURRENT_TIMESTAMP)") || die "Error creating item_transaction table: ".$DBI::errstr;
+                      date datetime default CURRENT_TIMESTAMP,
+                      type_id integer REFERENCES item_transaction_type(item_transaction_type_id)
+                     )") || die "Error creating item_transaction table: ".$DBI::errstr;
 
     $dbh->do("create table if not exists item_transaction_detail
                      (item_transaction_id integer NOT NULL REFERENCES item_transaction(item_transaction_id),
@@ -36,11 +52,18 @@ my $dbname = shift;
                       primary key (item_transaction_id, barcode))") || die "Error creating item_transaction_detail table: ".$DBI::errstr;
     $dbh->do("create index if not exists item_transaction_detail_barcode_index on item_transaction_detail(barcode)")
         || die "Error creating item_transaction index: ".$DBI::errstr;
- 
-    my $self = { dbh => $dbh };
-    bless $self,$class;
-    return $self;
+
+    my %tx_types = ( 1 => 'sale', 2 => 'receive', 3 => 'expired', 4 => 'initial_import' );
+    my $check_sth = $dbh->prepare("select item_transaction_type_id from item_transaction_type where item_transaction_type_id = ?");
+    my $insert_sth = $dbh->prepare("insert into item_transaction_type (item_transaction_type_id, name) values (?,?)");
+    foreach my $id ( keys %tx_types ) {
+        $check_sth->execute($id);
+        unless ($check_sth->fetchrow_arrayref) {
+            $insert_sth->execute($id, $tx_types{$id});
+        }
+    }
 }
+ 
 
 sub dbh {
     return $_[0]->{'dbh'};
@@ -258,22 +281,53 @@ sub rollback {
     $self->dbh->rollback();
 }
 
-sub create_order {
-    my($self,$item_transaction_id) = @_;
-    
-    unless ($item_transaction_id) {
-        die "order number is required\n";
+sub transaction_type_id_for_name  {
+    my $self = shift;
+    my $name = shift;
+
+    my $sth = $self->dbh->prepare_cached('select item_transaction_type_id from item_transaction_type where name = ?');
+    unless ($sth) {
+        Carp::confess('prepare for transaction_type_id_for_name failed: ',$DBI::errstr);
+        $sth->finish;
         return;
     }
 
-    my $sth = $self->dbh->prepare_cached('insert into item_transaction (item_transaction_id) values (?)');
+    unless ($sth->execute($name) ) {
+        Carp::confess("execute for transaction_type_id_for_name failed (name $name): ".$DBI::errstr);
+        $sth->finish;
+        return;
+    }
+
+    my @row = $sth->fetchrow();
+    $sth->finish;
+
+    unless (@row) {
+        die "No transaction type named $name\n";
+    }
+
+    return $row[0];
+}
+    
+   
+
+sub create_order {
+    my($self,$item_transaction_id,$type_name) = @_;
+    
+    unless ($item_transaction_id && $type_name) {
+        die "order id and type name are required\n";
+        return;
+    }
+    
+    my $tx_type_id = $self->transaction_type_id_for_name($type_name);
+
+    my $sth = $self->dbh->prepare_cached('insert into item_transaction (item_transaction_id,type_id) values (?,?)');
     unless ($sth) {
         Carp::confess('prepare for create_order failed: ',$DBI::errstr);
         $sth->finish;
         return;
     }
 
-    unless($sth->execute($item_transaction_id)) {
+    unless($sth->execute($item_transaction_id,$tx_type_id)) {
         die "execute for create_order failed (item_transaction_id $item_transaction_id: ".$DBI::errstr;
         $sth->finish;
         return;
@@ -281,7 +335,10 @@ sub create_order {
 
     $sth->finish;
 
-    return bless {_db => $self, _item_transaction_id => $item_transaction_id}, 'Inventory::Order';
+    my $order = { _db => $self,
+                  _item_transaction_id => $item_transaction_id,
+                  _type => $type_name };
+    return bless $order, 'Inventory::Order';
 }
 
 sub get_order_detail {
@@ -338,12 +395,30 @@ sub item_transaction_id {
     return shift->{'_item_transaction_id'};
 }
 
-sub add_item_by_barcode {
+sub sell_item_by_barcode {
     my($self, $barcode) = @_;
+
+    my $type = $self->{'_type'};
+    unless ($type eq 'sale' or $type eq 'expired') {
+        die "Tried to sell barcode $barcode and order type was $type\n";
+    }
 
     no warnings 'uninitialized';
     --$self->{$barcode};
 }
+
+sub receive_item_by_barcode {
+    my($self, $barcode) = @_;
+
+    my $type = $self->{'_type'};
+    unless ($type eq 'receive' or $type eq 'initial_import') {
+        die "Tried to receive barcode $barcode and order type was $type\n";
+    }
+
+    no warnings 'uninitialized';
+    ++$self->{$barcode};
+}
+
 
 sub barcodes {
     my $self = shift;
