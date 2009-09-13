@@ -191,26 +191,31 @@ sub create_item {
 sub adjust_count_by_barcode {
     my($self,$barcode,$adjustment) = @_;
 
-    my $item = $self->lookup_by_barcode($barcode);
-    unless ($item) {
-        die "No item with barcode $barcode\n";
-        return;
-    }
-    my $new_count = $item->{'count'} + $adjustment;
-    my $sth = $self->dbh->prepare_cached("update inventory set count = ? where barcode = ?");
+    my $sth = $self->dbh->prepare_cached("update inventory set count = count + ? where barcode = ?");
     unless ($sth) {
         Carp::confess('prepare for adjust_count_by_barcode failed: '.$DBI::errstr);
         $sth->finish;
     }
 
-    unless ($sth->execute($new_count, $barcode)) {
-        Carp::confess("execute($new_count $barcode) for adjust_count_by_barcode failed: ".$DBI::errstr);
+    unless ($sth->execute($adjustment, $barcode)) {
+        Carp::confess("execute($adjustment $barcode) for adjust_count_by_barcode failed: ".$DBI::errstr);
         $sth->finish;
     }
 
     $sth->finish;
 
-    return $new_count || '0 but true';
+    my $item = $self->lookup_by_barcode($barcode);
+    unless ($item) {
+        die "No item with barcode $barcode\n";
+        return;
+    }
+
+    if ($item->{'count'} < 0) {
+        die "Count below 0\n";
+    }
+
+
+    return $item->{'count'} || '0 but true';
 }
 
 sub set_count_by_barcode {
@@ -221,6 +226,7 @@ sub set_count_by_barcode {
         die "No item with barcode $barcode\n";
         return;
     }
+
     my $sth = $self->dbh->prepare_cached("update inventory set count = ? where barcode = ?");
     unless ($sth) {
         Carp::confess('prepare for set_count_by_barcode failed: '.$DBI::errstr);
