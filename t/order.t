@@ -1,12 +1,13 @@
 #!/usr/bin/perl
 
-use Test::More;
+use strict;
+use warnings;
+
+use Test::More tests => 28;
 
 use File::Temp;
 
 use Inventory;
-
-plan tests => 28;
 
 my (undef,$db_file) = File::Temp::tempfile();
 #my $db_file = '/tmp/inventory.sqlite3';
@@ -33,7 +34,7 @@ ok($order->sell_item_by_barcode('2345'), 'Added to order');
 ok($order->save(), 'Order saved');
 
 
-$order_detail = $db->get_order_detail('ordername');
+my $order_detail = $db->get_order_detail('ordername');
 ok($order_detail, 'Got details for order');
 is($order_detail->{'1234'}, -2, 'Count is correct for first item');
 is($order_detail->{'2345'}, -1, 'Count is correct for second item');

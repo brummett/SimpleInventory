@@ -5,12 +5,19 @@ use warnings;
 
 use DBI;
 use Carp;
+use File::Basename;
 
 sub connect {
 my $class = shift;
 my $dbname = shift;
 
-    $dbname ||= 'inventory.sqlite3';
+    my $path = File::Basename::dirname($INC{'Inventory.pm'});
+    $dbname ||= $path . '/inventory.sqlite3';
+
+    unless (-f $dbname) {
+        print STDERR "\cGWARNING: creating new database file at $dbname\n\n";
+    }
+
     my $dbh = DBI->connect("dbi:SQLite:dbname=$dbname",'','',{AutoCommit => 0});
     unless ($dbh) {
         print STDERR "Can't create/connect to DB inventory.sqlite3: ".$DBI::errstr."\n";
@@ -436,7 +443,7 @@ sub sell_item_by_barcode {
     --$self->{$barcode};
 }
 
-sub receive_item_by_barcode {
+sub receive_item_by_barcode ($$) {
     my($self, $barcode) = @_;
 
     my $type = $self->{'_type'};
@@ -446,6 +453,18 @@ sub receive_item_by_barcode {
 
     no warnings 'uninitialized';
     ++$self->{$barcode};
+}
+
+sub receive_items_by_barcode ($$$) {
+    my($self, $barcode, $count) = @_;
+
+    my $type = $self->{'_type'};
+    unless ($type eq 'receive' or $type eq 'initial_import') {
+        die "Tried to receive barcode $barcode and order type was $type\n";
+    }
+
+    no warnings 'uninitialized';
+    $self->{$barcode} += $count;
 }
 
 
@@ -473,8 +492,10 @@ sub save {
 
     my $db= $self ->_db;
     my @barcodes = $self->barcodes();
-    foreach my $barcode ( @barcodes ) {
-        $db->adjust_count_by_barcode($barcode, $self->{$barcode});
+    if ($self->{'_type'} ne 'initial_import') {
+        foreach my $barcode ( @barcodes ) {
+            $db->adjust_count_by_barcode($barcode, $self->{$barcode});
+        }
     }
 
     my $sth = $db->dbh->prepare_cached('insert into item_transaction_detail (item_transaction_id,barcode,count) values (?,?,?)');

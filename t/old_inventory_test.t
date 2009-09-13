@@ -4,10 +4,15 @@ use strict;
 use warnings;
 
 use Test::More tests => 20;
+use File::Temp;
 
 BEGIN { use_ok('Inventory'); }
 
-my $db = Inventory->connect('test.sqlite3');
+my (undef,$db_file) = File::Temp::tempfile();
+#my $db_file = '/tmp/inventory.sqlite3';
+
+my $db = Inventory->connect($db_file);
+
 ok($db, 'Created test DB');
 
 my $item;
@@ -62,4 +67,3 @@ is_deeply($item, { barcode => 'abcdef', sku => '123456', desc => 'Test thing 1',
 $db->dbh->rollback;
 $db->dbh->disconnect;
 
-unlink('test.sqlite3');

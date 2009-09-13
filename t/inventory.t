@@ -1,12 +1,12 @@
 #!/usr/bin/perl
 
-use Test::More;
+use strict;
+use warnings;
 
+use Test::More tests => 30;
 use File::Temp;
 
 use Inventory;
-
-plan tests => 30;
 
 my ($db_fh,$db_file) = File::Temp::tempfile();
 $db_fh->close();
