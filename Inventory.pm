@@ -425,12 +425,11 @@ sub verify_barcode_check_digit {
     my($class, $barcode) = @_;
 
     my @digits = split(//,$barcode);
-    my $check = pop @digits;
-
-    if (@digits != 11) {
-        die "Not enough digits in barcode\n";
-        return;
+    if (@digits != 12) {
+        die "Excpected 12 barcide digits, got ",scalar(@digits),"\n";
     }
+
+    my $check = pop @digits;
 
     my @even = @digits[0,2,4,6,8,10];
     my $even = 0;
