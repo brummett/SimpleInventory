@@ -50,9 +50,9 @@ populate_initial_tx_details.pl - Used to make an initial record as an order
 
 barcodeselected.user.js - A Greasemonkey user script to create a barcode out
     of whatever text is highlighted and put that barcode at the bottom of the
-    page.  The idea is that you can add the order number as a barcode before
-    printing it out, so you can scan it in when you run the ship or receive
-    program.
+    page.  The idea is that you have an invoice system as a web page, you'd
+    add the order number as a barcode before printing it out, so you can scan
+    it in when you run the ship or receive program.
 
 Coming soon:
 
