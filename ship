@@ -52,6 +52,10 @@ while(1) {
     chomp $barcode if $barcode;
     last unless $barcode;
 
+    unless (eval {Inventory->verify_barcode_check_digit($barcode)} ) {
+        print STDERR "\cG$@\n";
+        next;
+    }
     $order->sell_item_by_barcode($barcode);
 }
 

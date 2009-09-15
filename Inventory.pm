@@ -420,6 +420,41 @@ sub get_order_detail {
     return $order;
 }
 
+# A convienent place to put this
+sub verify_barcode_check_digit {
+    my($class, $barcode) = @_;
+
+    my @digits = split(//,$barcode);
+    my $check = pop @digits;
+
+    if (@digits != 11) {
+        die "Not enough digits in barcode\n";
+        return;
+    }
+
+    my @even = @digits[0,2,4,6,8,10];
+    my $even = 0;
+    $even += $_ foreach @even;
+    $even *= 3;
+
+    my @odd = @digits[1,3,5,7,9];
+    my $odd = 0;
+    $odd += $_ foreach @odd;
+
+    my $sum = $even + $odd + $check;
+    if (! ($sum % 10)) {
+        return 1;
+    } else {
+        die "Bad barcode checksum: $sum\n";
+        return;
+    }
+}
+
+
+
+
+
+
 
 package Inventory::Order;
 
