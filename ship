@@ -42,6 +42,8 @@ if ($0 =~ m/expire_items$/) {
     print "Order number: ";
     my $order_number = <STDIN>;
     chomp $order_number;
+    $order_number =~ s/^\s+//;
+    $order_number =~ s/\s+$//;
     $order = $db->create_order($order_number,'sale');
 }
 
@@ -50,12 +52,19 @@ while(1) {
 
     my $barcode = <STDIN>;
     chomp $barcode if $barcode;
+    $barcode =~ s/^\s+//;
+    $barcode =~ s/\s+$//;
     last unless $barcode;
 
     unless (eval {Inventory->verify_barcode_check_digit($barcode)} ) {
         print STDERR "\cG$@\n";
         next;
     }
+
+    if (my $item = $db->lookup_by_barcode($barcode)) {
+        print $item->{'desc'},"\n";
+    }
+     
     $order->sell_item_by_barcode($barcode);
 }
 

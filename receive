@@ -35,6 +35,8 @@ my %new_items;
 
 print "Receive order number: ";
 chomp(my $order_number = <STDIN>);
+$order_number =~ s/^\s+//;
+$order_number =~ s/\s+$//;
 my $order = $db->create_order($order_number, 'receive');
 
 while(1) {
@@ -42,6 +44,8 @@ while(1) {
 
     my $barcode = <STDIN>;
     chomp $barcode if $barcode;
+    $barcode =~ s/^\s+//;
+    $barcode =~ s/\s+$//;
     last unless $barcode;
 
     unless (eval { Inventory->verify_barcode_check_digit($barcode) } ) {
@@ -53,6 +57,7 @@ while(1) {
 
     if ($item) {
         $order->receive_item_by_barcode($barcode);
+        print $item->{'desc'},"\n";
 
     } else {
         $new_items{$barcode}++;
