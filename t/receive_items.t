@@ -40,7 +40,7 @@ is($order_detail->{'2345'}, 1, 'Count is correct for second item');
 
 $order = eval {$db->create_order('ordername','receive') };
 ok (! $order, 'Correctly could not create order with duplicate order number');
-like($@, qr(column item_transaction_id is not unique), 'Exception says sales_order_id is not unique');
+like($@, qr(item_transaction_id is not unique), 'Exception says sales_order_id is not unique');
 
 
 $order = $db->create_order('badorder','receive');

@@ -353,24 +353,11 @@ sub create_order {
         die "order id and type name are required\n";
         return;
     }
+
+    if ($self->get_order_detail($item_transaction_id)) {
+        die "item_transaction_id is not unique";
+    }
     
-    my $tx_type_id = $self->transaction_type_id_for_name($type_name);
-
-    my $sth = $self->dbh->prepare_cached('insert into item_transaction (item_transaction_id,type_id) values (?,?)');
-    unless ($sth) {
-        Carp::confess('prepare for create_order failed: ',$DBI::errstr);
-        $sth->finish;
-        return;
-    }
-
-    unless($sth->execute($item_transaction_id,$tx_type_id)) {
-        die "execute for create_order failed (item_transaction_id $item_transaction_id: ".$DBI::errstr;
-        $sth->finish;
-        return;
-    }
-
-    $sth->finish;
-
     my $order = { _db => $self,
                   _item_transaction_id => $item_transaction_id,
                   _type => $type_name };
@@ -394,6 +381,7 @@ sub get_order_detail {
     }
 
     my @row = $sth->fetchrow_array();
+    $sth->finish;
     return unless @row;
 
     my $order = { _item_transaction_id => $item_transaction_id, _date => $row[0] };
@@ -525,14 +513,32 @@ sub save {
     return if ($self->{'_saved'});
 
     my $db= $self ->_db;
-    my @barcodes = $self->barcodes();
-    if ($self->{'_type'} ne 'initial_import') {
+
+    my $tx_type_id = $db->transaction_type_id_for_name($self->{'_type'});
+    my $sth = $db->dbh->prepare_cached('insert into item_transaction (item_transaction_id,type_id) values (?,?)');
+    unless ($sth) {
+        Carp::confess('prepare for create_order failed: ',$DBI::errstr);
+        $sth->finish;
+        return;
+    }
+
+    my $item_transaction_id = $self->{'_item_transaction_id'};
+    unless($sth->execute($item_transaction_id,$tx_type_id)) {
+        die "execute for create_order failed (item_transaction_id $item_transaction_id: ".$DBI::errstr;
+        $sth->finish;
+        return;
+    }
+
+   $sth->finish;
+
+   my @barcodes = $self->barcodes();
+   if ($self->{'_type'} ne 'initial_import') {
         foreach my $barcode ( @barcodes ) {
             $db->adjust_count_by_barcode($barcode, $self->{$barcode});
         }
     }
 
-    my $sth = $db->dbh->prepare_cached('insert into item_transaction_detail (item_transaction_id,barcode,count) values (?,?,?)');
+    $sth = $db->dbh->prepare_cached('insert into item_transaction_detail (item_transaction_id,barcode,count) values (?,?,?)');
     unless ($sth) {
         die 'prepare for save-items failed: '.$DBI::errstr;
         $sth->finish;
