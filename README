@@ -1,0 +1,67 @@
+SimepleInventory - Perl scripts to track inventory for a small business
+
+Inventory items are tracked in a SQLite database, and stores information
+like:
+    * UPC barcode
+    * SKU number
+    * Free-form description
+    * Current count
+    * Dates and times orders were received or shipped
+    * Items included in those shipments
+
+Most interaction with the command-line programs is intended to be through
+a barcode scanner.
+
+Programs included:
+
+receive - Run this to record receiving items into your inventory.  It will
+    ask for an order number, which must be unique.  After that, it will
+    accept UPC numbers (probably from a barcode scanner).  When you're done,
+    hit Control-D.  If there were any items not known to the database, it
+    will prompt for SKU numbers and description for each unknown item.
+
+ship - Run this to record a shipment to a single customer.  It will ask for
+    an order number, which must be unique.  After that, it will accept UPC
+    numbers until you hit Control-D.  At the end, if there were any unknown
+    numbers or if the database thinks the count of an item would fall below
+    0, it will complain about the problems and abort the order.  You should
+    fix the problems and try the shipment again.
+
+expire_items - Run this to remove items from the inventory if they are
+    expired or broken.  It works just like ship, except that the order is
+    not recorded as a sale, but as an expiration.  That way the inventory
+    count is decremented, but sales reports will not show them.
+
+lookup_inventory - Looks up items in the inventory by UPC number, SKU, or
+    as a partial match on the description field.
+
+froogle_to_froogle_and_amazon.pl - This is used to take a Zencart export for
+    Froogle, and fix it up by adding the UPC numbers and condition columns to
+    the report.  It also creates a file for import to Amazon's marketplace.
+
+And a few things under tools/ that may be of use...
+
+import_tips_data.pl - Takes a text file with 3 columns seperated by
+    whitespace (count, UPC, description), and imports them into the inventory
+    table.  The data for UPC is also used for the SKU field.
+
+populate_initial_tx_details.pl - Used to make an initial record as an order
+    of all the items currently existing in the inventory.
+
+barcodeselected.user.js - A Greasemonkey user script to create a barcode out
+    of whatever text is highlighted and put that barcode at the bottom of the
+    page.  The idea is that you have an invoice system as a web page, you'd
+    add the order number as a barcode before printing it out, so you can scan
+    it in when you run the ship or receive program.
+
+Coming soon:
+
+* Customer tracking
+* More reports
+* More documentation
+* GUI tools
+    
+
+
+
+
