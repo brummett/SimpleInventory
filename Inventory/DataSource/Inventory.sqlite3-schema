@@ -1,5 +1,5 @@
 CREATE TABLE item
-    ( item_id NOT NULL PRIMARY KEY,
+    ( item_id integer NOT NULL PRIMARY KEY,
       barcode varchar NOT NULL,
       sku varchar NOT NULL,
       desc varchar,
