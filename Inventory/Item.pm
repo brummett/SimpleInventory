@@ -8,7 +8,7 @@ class Inventory::Item {
     type_name => 'item',
     table_name => 'ITEM',
     id_by => [
-        item_id => {  },
+        item_id => { is => 'integer' },
     ],
     has => [
         barcode => { is => 'varchar' },

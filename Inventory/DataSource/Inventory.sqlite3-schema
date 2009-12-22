@@ -5,20 +5,19 @@ CREATE TABLE item
       desc varchar,
       UNIQUE (barcode,sku));
 
-CREATE TABLE order_type
-    ( order_type_id integer PRIMARY KEY NOT NULL,
-      name varchar NOT NULL);
-INSERT INTO order_type (order_type_id, name) values (1, 'sold');
-INSERT INTO order_type (order_type_id, name) values (2, 'received');
-INSERT INTO order_type (order_type_id, name) values (3, 'expired');
-INSERT INTO order_type (order_type_id, name) values (4, 'physicalinventorycorrection');
-INSERT INTO order_type (order_type_id, name) values (5, 'purchaseorder');
+CREATE TABLE order_class
+    ( order_class_name varchar PRIMARY KEY NOT NULL );
+INSERT INTO order_class values ('Inventory::Order::Sale');
+INSERT INTO order_class values ('Inventory::Order::Purchase');
+INSERT INTO order_class values ('Inventory::Order::Expiration');
+INSERT INTO order_class values ('Inventory::Order::InventoryCorrection');
+INSERT INTO order_class values ('Inventory::Order::PurchaseOrder');
 
 CREATE TABLE orders
     ( order_id integer NOT NULL PRIMARY KEY,
       order_number varchar NOT NULL UNIQUE,
       date datetime default CURRENT_TIMESTAMP,
-      order_type_id integer NOT NULL REFERENCES order_type(order_type_id)
+      order_class varchar NOT NULL REFERENCES order_class(order_class_name)
     );
 
 CREATE TABLE order_item_detail
@@ -47,7 +46,6 @@ CREATE VIEW inventory AS
     from item i
     join order_item_detail oi on i.item_id = oi.item_id
     join orders on oi.order_id = orders.order_id
-    join order_type ot on orders.order_type_id = ot.order_type_id
-    where ot.name != 'purchaseorder'
+    where orders.order_class != 'Inventory::Order::PurchaseOrder'
     group by i.item_id;
     

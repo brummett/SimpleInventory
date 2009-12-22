@@ -11,7 +11,7 @@ class Inventory::View::Inventory {
         barcode  => { is => 'varchar', is_optional => 1 },
         count    => { is_optional => 1 },
         desc     => { is => 'varchar', is_optional => 1 },
-        item_id  => { is_optional => 1 },
+        item_id  => { is => 'integer', is_optional => 1 },
         sku      => { is => 'varchar', is_optional => 1 },
     ],
     schema_name => 'Inventory',
