@@ -15,4 +15,11 @@ class Inventory::OrderClass {
     data_source => 'Inventory::DataSource::Inventory',
 };
 
+sub name {
+    my $self = shift;
+
+    my($name) = $self->order_class_name =~ m/::(\w+)$/;
+    return lc $name;
+}
+
 1;

@@ -14,9 +14,12 @@ class Inventory::Order {
     has => [
         date                    => { is => 'datetime', is_optional => 1 },
         order_class             => { is => 'varchar' },
+        order_class_obj         => { is => 'Inventory::OrderClass', id_by => 'order_class' },
+        order_type_name         => { via => 'order_class_obj', to => 'name' },
         order_number            => { is => 'varchar' },
 
         item_details            => { is => 'Inventory::OrderItemDetail', reverse_as => 'order', is_many => 1 },
+        items                   => { is => 'Inventory::Item', via => 'item_details', to => 'item', is_many => 1},
         item_detail_count       => { is_calculated => 1 },
         item_count              => { is_calculated => 1 },
 
