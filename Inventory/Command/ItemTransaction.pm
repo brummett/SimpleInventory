@@ -208,7 +208,6 @@ sub get_order_object {
 
     my $order_number = $self->resolve_order_number();
 
-$DB::single=1;
     my $order_type = $self->_order_type_to_create();
     my $order = $order_type->get(order_number => $order_number);
     if ($self->append) {
