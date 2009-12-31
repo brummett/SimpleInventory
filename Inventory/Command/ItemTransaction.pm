@@ -8,13 +8,20 @@ use Inventory;
 use IO::Handle;
 
 class Inventory::Command::ItemTransaction {
-    is => 'Command',
+    is => 'Inventory::Command',
     doc => 'Parent class for commands like sale, purchase, expire, etc',
     is_abstract => 1,
-    has => [
+    has_optional => [
         order_number => { is => 'String', doc => 'Order number to put this sale under' },
         append => { is => 'Boolean', doc => 'If true, this will add items to an existing transaction', },
         remove => { is => 'Boolean', doc => 'If true, this will remove items from an existing transaction' },
+    ],
+    has => [
+        order => { is_calculated => 1,
+                   calculate => q( my $order_number = $self->order_number;
+                                   my $order = Inventory::Order->get(order_number => $order_number);
+                                   return $order ),
+                 },
     ],
 };
 
@@ -37,7 +44,8 @@ sub add_item {
     my($self, $item) = @_;
     
     my $count = $self->_count_for_order_item_detail;
-    my $oid = Inventory::OrderItemDetail->create(item_id => $item->id, count => $count);
+    #my $oid = Inventory::OrderItemDetail->create(item_id => $item->id, count => $count);
+    my $oid = $self->order->add_item_detail(item_id => $item->id, count => $count);
     unless ($oid) {
         $self->error_message("Couldn't create item detail record for order ".$self->order_number);
         return;
@@ -48,7 +56,8 @@ sub add_item {
 sub remove_item {
     my($self, $item) = @_;
 
-    my @oids = Inventory::OrderItemDetail->get(item_id => $item->id);
+    my $order = $self->order;
+    my @oids = Inventory::OrderItemDetail->get(order_id => $order->id, item_id => $item->id);
     unless (@oids) {
         $self->error_message("Order ".$self->order_number." has no items with barcode ".$item->barcode);
         return;
@@ -117,7 +126,8 @@ sub apply_barcodes_to_order {
 sub check_order_for_items_below_zero_count {
     my($self,$order) = @_;
 
-    my @all_items = $order->items();
+    my %all_item_ids = map { $_->id => 1 } $order->items();
+    my @all_items = Inventory::Item->get(item_id => [ keys %all_item_ids ]);
     my @problem_items = grep { $_->count < 0 } @all_items;
 
     return @problem_items;
@@ -147,6 +157,9 @@ sub scan_barcodes_for_order {
         $barcode =~ s/\s+$//;
         last SCANNING_ITEMS unless $barcode;
 
+        # Only check barcodes more than 4 chars...
+        # less than 4 char barcode fields are used for special items and
+        # are obviously not barcodes
         unless (Inventory::Util->verify_barcode_check_digit($barcode)) {
             $self->warning_message("Barcode did not scan properly");
             Inventory::Util->play_sound('error');
@@ -178,11 +191,14 @@ sub prompt_for_info_on_barcode {
 sub resolve_order_number {
     my $self = shift;
 
-    print "Order Number: ";
-    my $order_number = STDIN->getline();
-    $order_number =~ s/^\s+//;
-    $order_number =~ s/\s+$//;
-
+    my $order_number = $self->order_number;
+    unless (defined $order_number) {
+        print "Order Number: ";
+        $order_number = STDIN->getline();
+        $order_number =~ s/^\s+//;
+        $order_number =~ s/\s+$//;
+        $self->order_number($order_number);
+    }
     return $order_number;
 }
 
@@ -192,6 +208,7 @@ sub get_order_object {
 
     my $order_number = $self->resolve_order_number();
 
+$DB::single=1;
     my $order_type = $self->_order_type_to_create();
     my $order = $order_type->get(order_number => $order_number);
     if ($self->append) {

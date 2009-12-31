@@ -7,12 +7,13 @@ use Inventory;
 use IO::Handle;
 
 class Inventory::Command::CreateItem {
-    is => 'Command',
+    is => 'Inventory::Command',
     has_optional => [
         barcode => { is => 'String' },
         sku     => { is => 'String' },
         desc    => { is => 'String' },
     ],
+    doc => 'Create a new item by prompting the user',
 };
 
 sub execute {
@@ -27,12 +28,15 @@ sub execute {
         }
     
         my @items = Inventory::Item->get(%params);
-        if (@items != 1) {
+        if (@items > 1) {
             my $param_str = join(', ', map { $_ . ': ' . $params{$_} } keys %params);
-            $self->error_message("Expected to find one item for params $param_str, but got ".scalar(@items));
+            $self->error_message("Expected to find zer or one item for params $param_str, but got ".scalar(@items));
             return;
         }
         $item = shift @items;
+    } 
+
+    if ($item) {
         $self->status_message("Updating item: ".$item->desc);
     
     } else {
@@ -77,9 +81,15 @@ sub execute {
 sub get_response_for {
     my($self,$attr) = @_;
 
-    print "    $attr: ";
-    my $val = STDIN->getline() || '';
-    chomp $val;
+    my $val;
+    if ($self->can($attr)) { 
+        $val = $self->$attr();
+    }
+    unless (defined $val) {
+        print "    $attr: ";
+        $val = STDIN->getline() || '';
+        chomp $val;
+    }
     return $val;
 }
         

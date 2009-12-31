@@ -6,13 +6,14 @@ use warnings;
 use Inventory;
 
 class Inventory::Command::ItemHistory {
-    is => 'Command',
+    is => 'Inventory::Command',
     has_optional => [
         items    => { is => 'ARRAY' },
         item_ids => { is => 'ARRAY' },
         barcodes => { is => 'ARRAY' },
         skus     => { is => 'ARRAY' },
     ],
+    doc => 'Show the order history for an item',
 };
 
 # FXIME turn this into a viewer...

@@ -1,0 +1,5 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use above 'Inventory';
+Inventory::Command->execute_with_shell_params_and_exit();

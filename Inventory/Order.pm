@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Inventory;
+my $now = scalar(localtime);
 class Inventory::Order {
     type_name => 'order',
     table_name => 'ORDERS',
@@ -12,7 +13,7 @@ class Inventory::Order {
         order_id => { is => 'integer' },
     ],
     has => [
-        date                    => { is => 'datetime', is_optional => 1 },
+        date                    => { is => 'datetime', default_value => $now },
         order_class             => { is => 'varchar' },
         order_class_obj         => { is => 'Inventory::OrderClass', id_by => 'order_class' },
         order_type_name         => { via => 'order_class_obj', to => 'name' },

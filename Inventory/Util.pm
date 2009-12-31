@@ -1,5 +1,8 @@
 package Inventory::Util;
 
+use strict;
+use warnings;
+
 use Inventory;
 
 class Inventory::Util {
@@ -10,9 +13,10 @@ class Inventory::Util {
 sub verify_barcode_check_digit {
     my($class, $barcode) = @_;
 
+    return 1 if length($barcode) <= 4;  # Barcodes with 4 or less digits have special uses
     my @digits = split(//,$barcode);
     if (@digits != 12) {
-        $self->error_message("Excpected 12 barcide digits, got ",scalar(@digits),"\n");
+        $class->error_message("Excpected 12 barcide digits, got ",scalar(@digits),"\n");
     }
 
     my $check = pop @digits;
@@ -30,7 +34,7 @@ sub verify_barcode_check_digit {
     if (! ($sum % 10)) {
         return 1;
     } else {
-        $self->error_message("Bad barcode checksum: $sum\n");
+        $class->error_message("Bad barcode checksum: $sum\n");
         return;
     }
 }
@@ -40,6 +44,8 @@ my %sound_files = ( error => 'homer_doh.mp3',
                     status => 'ding.mp3',
                   );
 sub play_sound {
+    return 1 if ($ENV{'INVENTORY_TEST'});
+
     my($class,$sound) = @_;
 
     # VT100 set reverse video

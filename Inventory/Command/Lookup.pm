@@ -8,10 +8,11 @@ use Inventory;
 use IO::Handle;
 
 class Inventory::Command::Lookup {
-    is => 'Command',
+    is => 'Inventory::Command',
     has => [
         key => { is => 'String', is_optional => 1, doc => 'item to look up, prompt if ommitted' },
     ],
+    doc => 'Show details about an item',
 };
  
 sub execute {
