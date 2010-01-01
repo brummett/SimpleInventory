@@ -24,7 +24,7 @@ sub execute {
     unless (defined $key) {
         STDOUT->autoflush(1);
         $prompted = 1;
-        print "SKU, barcode or partial description: ";
+        print "SKU, barcode or partial description: " unless ($ENV{'INVENTORY_TEST'});
         my $key = <STDIN>;
         return 1 unless $key;
 

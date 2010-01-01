@@ -38,7 +38,9 @@ sub count_for_order {
     my($self, $order) = @_;
 
     my @details = Inventory::OrderItemDetail->get(item_id => $self->item_id, order_id => $order->order_id);
-    return scalar(@details);
+    my $count = 0;
+    $count += $_->count foreach @details;
+    return $count;
 }
 
 sub history_as_string {
@@ -46,9 +48,9 @@ sub history_as_string {
 
     my @strings;
 
-    my @orders = $self->orders;
-    foreach my $order ( @orders ) {
-        my $kind = ucfirst( $order->order_typ_name );
+    my %orders = map { $_ => $_ } $self->orders;
+    foreach my $order ( sort { $a->id <=> $b->id } values %orders ) {
+        my $kind = ucfirst( $order->order_type_name );
         my $count = $self->count_for_order($order);
         push @strings, sprintf("%s order on %s:\t%d", $kind, $order->date, $count);
     }

@@ -86,7 +86,7 @@ sub get_response_for {
         $val = $self->$attr();
     }
     unless (defined $val) {
-        print "    $attr: ";
+        print "    $attr: " unless ($ENV{'INVENTORY_TEST'});
         $val = STDIN->getline() || '';
         chomp $val;
     }

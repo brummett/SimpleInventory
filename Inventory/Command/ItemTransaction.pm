@@ -139,8 +139,8 @@ sub orders_report_on_items {
 
     foreach my $item ( @$problem_items ) {
         my $count = $item->count();
-        $self->status_message("Item count below 0 ($count): ".$item->desc);
-        $self->status_message($item->history_as_string());
+        $self->warning_message("Item count below 0 ($count): ". $item->desc .
+                               "\n" . $item->history_as_string);
     }
 }
 
@@ -150,7 +150,7 @@ sub scan_barcodes_for_order {
     my @barcodes;
     SCANNING_ITEMS:
     while(1) {
-        print "Scan: ";
+        print "Scan: " unless ($ENV{'INVENTORY_TEST'});
         my $barcode = STDIN->getline();
         last SCANNING_ITEMS unless $barcode;
         chomp $barcode if $barcode;
@@ -195,7 +195,7 @@ sub resolve_order_number {
 
     my $order_number = $self->order_number;
     unless (defined $order_number) {
-        print "Order Number: ";
+        print "Order Number: " unless ($ENV{'INVENTORY_TEST'});
         $order_number = STDIN->getline();
         $order_number =~ s/^\s+//;
         $order_number =~ s/\s+$//;
