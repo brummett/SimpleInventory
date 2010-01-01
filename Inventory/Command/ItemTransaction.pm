@@ -212,22 +212,23 @@ sub get_order_object {
     my $order = $order_type->get(order_number => $order_number);
     if ($self->append) {
         if ($order) {
-            $self->status_message("*** Adding items to an existing order ***\n");
+            $self->status_message("*** Adding items to an existing $order_type ***\n");
         } else {
-            $self->error_message("No order found with that order number");
+            $self->error_message("No $order_type found with that order number");
             return;
         }
 
     } elsif ($order) { # not append
-        $self->error_message("An order already exists with that order number");
+        $self->error_message("A(n) $order_type already exists with that order number");
         return;
     
     } else {
         $order = $order_type->create(order_number => $order_number);
         unless ($order) {
-            $self->error_message("Couldn't create Sales order record");
+            $self->error_message("Couldn't create a(n) $order_type record");
             return;
         }
+        $self->status_message("Starting a new $order_type");
     }
 
     return $order;

@@ -10,7 +10,7 @@ use warnings;
 use Test::More;
 use above 'Inventory';
 
-plan tests => 1;
+plan tests => 18;
 
 my $cmd = Inventory::Command::PhysicalInventory->create(year => 1900);
 ok($cmd, 'Instantiated command object');
@@ -72,9 +72,9 @@ my $rows_read = 0;
 while(my $item_data = $sth->fetchrow_hashref()) {
     $rows_read++;
     my $barcode = $items_by_item_id{$item_data->{'item_id'}}->{'barcode'};
-    $count_for_barcode{$barcode}++;
+    $count_for_barcode{$barcode}+= $item_data->{'count'};
 }
-is($rows_read, 5, 'Read 5 rows from the order_item_detail table');
+is($rows_read, 2, 'Read 5 rows from the order_item_detail table');
 is(scalar(keys %count_for_barcode), 2, 'order_item_detail shows 2 distinct barcodes');
 is($count_for_barcode{'1'}, 3, 'There were 3 item "1"s');
 is($count_for_barcode{'2'}, 2, 'There were 2 item "2"s');

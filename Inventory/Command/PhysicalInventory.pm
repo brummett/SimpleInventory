@@ -27,6 +27,18 @@ sub _count_for_order_item_detail {
     1;
 }
 
+# For inventories, let's just have 1 row per item with the real count in that column
+sub add_item {
+    my($self, $item) = @_;
+
+    my $order = $self->order;
+    my $detail = Inventory::OrderItemDetail->get_or_create(order_id => $order->id,
+                                                           item_id  => $item->id);
+    my $count = $detail->count() || 0;
+    $detail->count($count+1);
+    return $detail;
+}
+
 sub resolve_order_number {
     my $self = shift;
 
