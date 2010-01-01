@@ -61,9 +61,7 @@ CREATE TABLE dd_table (
 );
 INSERT INTO "dd_table" VALUES('Inventory::DataSource::Inventory','','ITEM_ATTRIBUTE','TABLE','entity',NULL,'2009-12-21 21:57:30',NULL);
 INSERT INTO "dd_table" VALUES('Inventory::DataSource::Inventory','','ITEM','TABLE','entity',NULL,'2009-12-21 21:57:31',NULL);
-INSERT INTO "dd_table" VALUES('Inventory::DataSource::Inventory','','INVENTORY','VIEW','entity',NULL,'2009-12-21 21:57:31',NULL);
 INSERT INTO "dd_table" VALUES('Inventory::DataSource::Inventory','','ORDER_CLASS','TABLE','validation item',NULL,'2009-12-21 21:57:30',NULL);
-INSERT INTO "dd_table" VALUES('Inventory::DataSource::Inventory','','ORDER_ITEMS','VIEW','entity',NULL,'2009-12-21 21:57:31',NULL);
 INSERT INTO "dd_table" VALUES('Inventory::DataSource::Inventory','','ORDERS','TABLE','entity',NULL,'2009-12-21 21:57:32',NULL);
 INSERT INTO "dd_table" VALUES('Inventory::DataSource::Inventory','','ORDER_ITEM_DETAIL','TABLE','entity',NULL,'2009-12-21 21:57:31',NULL);
 CREATE TABLE dd_table_column (
@@ -85,25 +83,17 @@ INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','ITEM
 INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','ORDERS','ORDER_CLASS','varchar',NULL,'N','2009-12-21 21:57:32','');
 INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','ITEM','ITEM_ID','integer',NULL,'N','2009-12-21 21:57:31','');
 INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','ORDERS','ORDER_ID','integer',NULL,'N','2009-12-21 21:57:32','');
-INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','INVENTORY','ITEM_ID','integer',NULL,'Y','2009-12-21 21:57:31','');
 INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','ORDER_ITEM_DETAIL','COUNT','integer',NULL,'N','2009-12-21 21:57:31','');
-INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','INVENTORY','COUNT(*)','',NULL,'Y','2009-12-21 21:57:31','');
-INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','INVENTORY','SKU','varchar',NULL,'Y','2009-12-21 21:57:31','');
 INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','ITEM_ATTRIBUTE','ITEM_ATTRIBUTE_ID','integer',NULL,'N','2009-12-21 21:57:30','');
 INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','ITEM','BARCODE','varchar',NULL,'N','2009-12-21 21:57:31','');
-INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','INVENTORY','DESC','varchar',NULL,'Y','2009-12-21 21:57:31','');
 INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','ITEM','SKU','varchar',NULL,'N','2009-12-21 21:57:31','');
 INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','ORDERS','ORDER_NUMBER','varchar',NULL,'N','2009-12-21 21:57:32','');
-INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','INVENTORY','BARCODE','varchar',NULL,'Y','2009-12-21 21:57:31','');
-INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','ORDER_ITEMS','ORDER_ID','integer',NULL,'Y','2009-12-21 21:57:31','');
 INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','ITEM_ATTRIBUTE','ITEM_ID','integer',NULL,'N','2009-12-21 21:57:30','');
 INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','ORDER_ITEM_DETAIL','ITEM_ID','integer',NULL,'N','2009-12-21 21:57:31','');
 INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','ITEM','DESC','varchar',NULL,'Y','2009-12-21 21:57:31','');
-INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','ORDER_ITEMS','COUNT(*)','',NULL,'Y','2009-12-21 21:57:31','');
 INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','ORDER_ITEM_DETAIL','ORDER_ID','integer',NULL,'N','2009-12-21 21:57:31','');
 INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','ITEM_ATTRIBUTE','APPLICATION','varchar',NULL,'N','2009-12-21 21:57:30','');
 INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','ITEM_ATTRIBUTE','VALUE','varchar',NULL,'Y','2009-12-21 21:57:30','');
-INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','ORDER_ITEMS','ITEM_ID','integer',NULL,'Y','2009-12-21 21:57:31','');
 CREATE TABLE dd_unique_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -116,5 +106,5 @@ INSERT INTO "dd_unique_constraint_column" VALUES('Inventory::DataSource::Invento
 INSERT INTO "dd_unique_constraint_column" VALUES('Inventory::DataSource::Inventory','','ORDER_ITEM_DETAIL','sqlite_autoindex_order_item_detail_1','item_id');
 INSERT INTO "dd_unique_constraint_column" VALUES('Inventory::DataSource::Inventory','','ORDER_ITEM_DETAIL','sqlite_autoindex_order_item_detail_1','order_item_detail_id');
 INSERT INTO "dd_unique_constraint_column" VALUES('Inventory::DataSource::Inventory','','ORDERS','sqlite_autoindex_orders_1','order_number');
-INSERT INTO "dd_unique_constraint_column" VALUES('Inventory::DataSource::Inventory','','ITEM','sqlite_autoindex_item_1','sku');
+INSERT INTO "dd_unique_constraint_column" VALUES('Inventory::DataSource::Inventory','','ITEM','sqlite_autoindex_item_2','sku');
 COMMIT;
