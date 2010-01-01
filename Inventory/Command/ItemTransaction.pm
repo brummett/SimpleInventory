@@ -93,8 +93,9 @@ sub execute {
     my @barcodes = $self->scan_barcodes_for_order($order);
 
     if (! $self->should_interrupt_for_new_barcodes ) {
-        my @new_barcodes = grep { ! Inventory::Item->get( barcode => $_ ) } @barcodes;
-        $self->prompt_for_info_on_barcode(barcode => $_) foreach @new_barcodes;
+        my %new_barcodes = map { $_ => 1 }
+                           grep { ! Inventory::Item->get( barcode => $_ ) } @barcodes;
+        $self->prompt_for_info_on_barcode($_) foreach sort keys(%new_barcodes);
     }
 
     $self->apply_barcodes_to_order($order,\@barcodes);
@@ -155,7 +156,8 @@ sub scan_barcodes_for_order {
         chomp $barcode if $barcode;
         $barcode =~ s/^\s+//;
         $barcode =~ s/\s+$//;
-        last SCANNING_ITEMS unless $barcode;
+        # +++ is used in test cases to emulate the user hitting ^D
+        last SCANNING_ITEMS if( ! $barcode or $barcode eq '+++');
 
         # Only check barcodes more than 4 chars...
         # less than 4 char barcode fields are used for special items and
