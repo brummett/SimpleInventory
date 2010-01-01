@@ -98,7 +98,9 @@ sub execute {
         $self->prompt_for_info_on_barcode($_) foreach sort keys(%new_barcodes);
     }
 
-    $self->apply_barcodes_to_order($order,\@barcodes);
+    unless ($self->apply_barcodes_to_order($order,\@barcodes)) {
+        return 0;
+    }
 
     if(my @problem_items = $self->check_order_for_items_below_zero_count($order)) {
        $self->orders_report_on_items(\@problem_items);
@@ -116,6 +118,10 @@ sub apply_barcodes_to_order {
     my %items;
     foreach my $barcode ( @$barcodes ) {
         my $item = Inventory::Item->get(barcode => $barcode);
+        unless ($item) {
+            Carp::croak("Couldn't apply barcode $barcode to order " .
+                        $self->order_number . ": Item not found");
+        }
         $items{$barcode} = $item;
         $self->$apply_sub($item);
     }

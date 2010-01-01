@@ -10,10 +10,16 @@ use warnings;
 use Test::More;
 use above 'Inventory';
 
-plan tests => 18;
+plan tests => 22;
 
 my $cmd = Inventory::Command::PhysicalInventory->create(year => 1900);
 ok($cmd, 'Instantiated command object');
+$cmd->dump_warning_messages(0);
+$cmd->dump_error_messages(0);
+$cmd->dump_status_messages(0);
+$cmd->queue_warning_messages(1);
+$cmd->queue_error_messages(1);
+$cmd->queue_status_messages(1);
 # Insert 3 item 1s and 2 item 2s
 my $data = qq(1 
 one
@@ -24,12 +30,26 @@ first
 two
 second
 2
++++
+Y
 );
 close(STDIN);
 open(STDIN,'<',\$data);
 ok($cmd->execute(), 'executed ok');
 
 ok(UR::Context->commit(), 'Commit DB');
+
+my @errors = $cmd->error_messages();
+is(scalar(@errors), 0, 'Command produced no error messages');
+my @warnings = $cmd->warning_messages();
+is(scalar(@warnings), 2, 'Got 2 warning messages');
+is($warnings[0],
+   'first barcode 1 previous count 0 scanned count 3 correction 3',
+   'Saw message about inventory correction for item 1');
+is($warnings[1],
+   'second barcode 2 previous count 0 scanned count 2 correction 2',
+   'Saw message about inventory correction for item 2');
+
 
 my $dbh = Inventory::DataSource::Inventory->get_default_handle();
 my $sth;

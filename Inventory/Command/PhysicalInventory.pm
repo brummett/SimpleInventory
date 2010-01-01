@@ -48,20 +48,52 @@ sub resolve_order_number {
         $self->order_number($order_number);
     }
     return $order_number;
-
-#    my $order_type = $self->_order_type_to_create();
-#    my $order = $order_type->get(order_number => $name);
-#    if ($order) {
-#        $self->status_message("Appending to existing inventory for ".$self->year);
-#    } else {
-#        $self->status_message("Starting a new inventory for ".$self->year);
-#        $order = $order_type->create(order_number => $name);
-#    }
-#
-#    return $order->order_number;
 }
     
-    
+
+# Instead of creating order details directly, we want to just record the
+# cases where there's a difference between the previous count and the scanned
+#  count
+sub apply_barcodes_to_order {
+    my($self, $order, $barcodes) = @_;
+
+    my %count_for_barcode;
+    foreach my $barcode ( @$barcodes ) {
+        $count_for_barcode{$barcode}++;
+    }
+
+    my $correction_count = 0;
+    my $iter = Inventory::Item->create_iterator();
+    while(my $item = $iter->next()) {
+        my $count = $item->count();
+        my $scanned = $count_for_barcode{$item->barcode};
+        if ($count != $scanned) {
+            $correction_count++;
+            my $correction = Inventory::OrderItemDetail->create(order_id => $order->id,
+                                                                item_id  => $item->id,
+                                                                count    => $scanned - $count);
+            $self->warning_message(sprintf("%s barcode %s previous count %d scanned count %d correction %d",
+                                   $item->desc,
+                                   $item->barcode,
+                                   $count, $scanned, $correction->count));
+        }
+    }
+
+    $self->status_message("There are $correction_count inventory corrections");
+    my $ans;
+    while (1) {
+        print "Apply these changes (Y or N)? " unless ($ENV{'INVENTORY_TEST'});
+        chomp($ans = <STDIN>);
+        $ans = uc($ans);
+        last if ($ans eq 'Y' or $ans eq 'N');
+    }
+ 
+    if ($ans eq 'Y') {
+        return 1;
+    } else {
+        return 0;
+    }
+}
     
 
 1;
