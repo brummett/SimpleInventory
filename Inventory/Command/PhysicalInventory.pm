@@ -91,6 +91,8 @@ sub apply_barcodes_to_order {
     if ($ans eq 'Y') {
         return 1;
     } else {
+        $_->delete foreach $order->item_details();
+        $order->delete();
         return 0;
     }
 }
