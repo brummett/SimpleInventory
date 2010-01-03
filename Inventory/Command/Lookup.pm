@@ -9,23 +9,21 @@ use IO::Handle;
 
 class Inventory::Command::Lookup {
     is => 'Inventory::Command',
-    has => [
-        key => { is => 'String', is_optional => 1, doc => 'item to look up, prompt if ommitted' },
-    ],
     doc => 'Show details about an item',
 };
  
 sub execute {
     my $self = shift;
 
-    my $key = $self->key;
+    my $key = $self->bare_args();
+    $key = join(' ',@$key);
 
     my $prompted = 0;
-    unless (defined $key) {
+    unless ($key) {
         STDOUT->autoflush(1);
         $prompted = 1;
         print "SKU, barcode or partial description: " unless ($ENV{'INVENTORY_TEST'});
-        my $key = <STDIN>;
+        $key = <STDIN>;
         return 1 unless $key;
 
         chomp($key);
@@ -33,14 +31,19 @@ sub execute {
         return 1 unless $key;
     }
 
-    my @items = Inventory::Item->get(sky => $key);
+    my @items = Inventory::Item->get(sku => $key);
     push @items, Inventory::Item->get(barcode => $key);
-    push @items, Inventory::Item->get('desc like' => $key);
+    push @items, Inventory::Item->get('desc like' => "\%$key\%"); 
 
     foreach my $item ( @items ) {
+        my $history = $item->history_as_string();
+        $history ||= '';
+        $history =~ s/\n/\n\t/gs;
+
         $self->status_message(
-            sprintf("Item: barcode %s sku %s count %d\n\t%s\n",
-                $item->barcode, $item->sku, $item->count. $item->desc));
+            sprintf("Item: barcode %s sku %s count %d\n\t%s\n%s\n\n",
+                $item->barcode, $item->sku, $item->count, $item->desc, $history)
+        );
     }
 
     return 1;
