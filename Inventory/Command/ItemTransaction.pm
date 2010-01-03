@@ -61,7 +61,7 @@ sub remove_item {
     unless (@oids) {
         my @some = Inventory::OrderItemDetail::Ghost->get(order_id => $order->id, item_id => $item->id);
         if (@some) {
-            $self->error_message("Tried to remove too many " . $item->desc . " from Order ".$self->order_number);
+            $self->error_message("Tried to remove too many " . $item->desc . " from order ".$self->order_number);
         } else {
             $self->error_message("Order ".$self->order_number." has no item with barcode ".$item->barcode);
         }

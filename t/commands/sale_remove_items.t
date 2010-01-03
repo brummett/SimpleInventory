@@ -10,7 +10,7 @@ use warnings;
 use Test::More;
 use above 'Inventory';
 
-plan tests => 26;
+plan tests => 30;
 
 my $dbh = &setup_db();
 
@@ -45,7 +45,10 @@ close(STDIN);
 open(STDIN,'<',\$data);
 my $retval = eval { $cmd->execute() };
 ok(! $retval, 'execute correctly returned false');
-like($@, qr/Order 1234 has no item with barcode 3/, 'Exception reported correctly');
+my @errors = $cmd->error_messages();
+is(scalar(@errors),1, 'Got 1 error message');
+like($errors[0], qr(Order 1234 has no item with barcode 3), 'Error reported no item 3');
+like($@, qr/Exiting without saving/, 'Exception reported correctly');
 
 ok(UR::Context->rollback, 'Rollback DB after failure');
 
@@ -63,7 +66,10 @@ close(STDIN);
 open(STDIN,'<',\$data);
 $retval = eval { $cmd->execute() };
 ok(! $retval, 'execute correctly returned false');
-like($@, qr/Order 1234 has no item with barcode 2/, 'Exception reported correctly');
+@errors = $cmd->error_messages();
+is(scalar(@errors), 1, 'got 1 error message');
+like($errors[0], qr(Tried to remove too many two from order 1234), 'Error reported too many item 2 removed');
+like($@, qr/Exiting without saving/, 'Exception reported correctly');
 
 ok(UR::Context->rollback, 'Rollback DB after failure');
 
