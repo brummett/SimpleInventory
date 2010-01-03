@@ -59,8 +59,7 @@ sub remove_item {
     my $order = $self->order;
     my @oids = Inventory::OrderItemDetail->get(order_id => $order->id, item_id => $item->id);
     unless (@oids) {
-        $self->error_message("Order ".$self->order_number." has no items with barcode ".$item->barcode);
-        return;
+        Carp::croak "Order ".$self->order_number." has no item with barcode ".$item->barcode;
     }
 
     my $expected_count = $self->_count_for_order_item_detail();
@@ -72,6 +71,11 @@ sub remove_item {
     } else {
         my $oid = shift @oids;
         $oid->count($oid->count - $expected_count);
+        if ($oid->count < 0) {
+            Carp::croak(sprintf("Order %s cannot remove barcode %s: Count dropped below 0",
+                                $self->order_number,
+                                $item->barcode));
+        }
     }
 
     return 1;
@@ -89,6 +93,10 @@ sub execute {
     STDOUT->autoflush(1);
 
     my $order = $self->get_order_object();
+    unless ($order) {
+        $self->error_message("Could not create order record for this transaction.  Exiting...");
+        return;
+    }
 
     my @barcodes = $self->scan_barcodes_for_order($order);
 
@@ -218,7 +226,7 @@ sub get_order_object {
 
     my $order_type = $self->_order_type_to_create();
     my $order = $order_type->get(order_number => $order_number);
-    if ($self->append) {
+    if ($self->append || $self->remove) {
         if ($order) {
             $self->status_message("*** Adding items to an existing $order_type ***\n");
         } else {
