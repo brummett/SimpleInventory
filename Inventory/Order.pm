@@ -23,6 +23,7 @@ class Inventory::Order {
         item_detail_count => { is => 'Integer', is_calculated => 1 },
         item_count        => { is => 'Integer', is_calculated => 1 },
         source            => { is => 'varchar', is_optional => 1, doc => 'Where the order came from (Amazon, Web, etc)' },
+        attributes        => { is => 'Inventory::OrderAttribute', reverse_as => 'order', is_many => 1 },
     ],
     schema_name => 'Inventory',
     data_source => 'Inventory::DataSource::Inventory',

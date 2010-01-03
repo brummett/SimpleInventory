@@ -21,6 +21,14 @@ CREATE TABLE orders
       source varchar,
     );
 
+CREATE TABLE order_attributes
+    ( order_attribute_id integer NOT NULL PRIMARY KEY,
+      order_id integer NOT NULL REFERENCES orders(order_id),
+      name varchar NOT NULL,
+      value varchar
+    );
+
+
 CREATE TABLE order_item_detail
     ( order_item_detail_id integer PRIMARY KEY NOT NULL,
       order_id integer NOT NULL REFERENCES orders(order_id),
