@@ -33,6 +33,8 @@ sub execute {
     $self->_import_orders($old_dbh);
 
     $self->_import_order_details($old_dbh);
+    
+    $self->_verify_counts($old_dbh);
 
     return 1;
 }
@@ -127,3 +129,31 @@ sub _import_order_details {
 }
 
 
+sub _verify_counts {
+    my($self,$dbh) = @_;
+
+    print "Verifying item counts\n";
+    my $sth = $dbh->prepare('select * from inventory where barcode = ?');
+
+    my $iter = Inventory::Item->create_iterator();
+    my $count = 0;
+    my $die = 0;
+    while (1) {
+        my $item = $iter->next();
+        last unless $item;
+        my $new_count = $item->count();
+
+        $sth->execute($item->barcode);
+
+        my $row = $sth->fetchrow_hashref();
+        my $old_count = $row->{'count'};
+        if ($new_count != $old_count) {
+            printf("Item barcode %s desc %s old count %d new count %d",
+                   $item->barcode, $item->desc, $old_count, $new_count);
+            $die = 1;
+        }
+    }
+    die "Exiting without saving" if $die;
+
+    return 1;
+}
