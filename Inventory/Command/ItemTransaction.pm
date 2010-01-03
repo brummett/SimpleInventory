@@ -182,8 +182,13 @@ sub scan_barcodes_for_order {
             next;
         }
         
-        if ($self->should_interrupt_for_new_barcodes and ! Inventory::Item->get(barcode => $barcode) ) {
+        my $item = Inventory::Item->get(barcode => $barcode);
+        if ($item) { 
+            $self->status_message($item->desc);
+        } elsif ($self->should_interrupt_for_new_barcodes) {
             $self->prompt_for_info_on_barcode($barcode);
+        } else {
+            $self->status_message("unknown item, will prompt later for details");
         }
         push @barcodes, $barcode;
     }
