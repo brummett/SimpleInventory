@@ -61,7 +61,7 @@ $cmd->queue_warning_messages(1);
 $cmd->queue_error_messages(1);
 # Note that we're not putting in the description for barcode 4, since it should
 # still be in the system
-my $data = qq(1 
+$data = qq(1 
 1
 2
 1

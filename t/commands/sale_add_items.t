@@ -72,20 +72,20 @@ is($count, 2, 'Saw 2 order records');
     
 
 # The order_item_detail table
-my $sth = $dbh->prepare('select * from order_item_detail where order_id = ?');
+$sth = $dbh->prepare('select * from order_item_detail where order_id = ?');
 ok($sth->execute($the_order->id), 'getting order_item_detail data');
 my %count_for_item = ('1' => 0, '2' => 0, 3=> 0);
 my $rows_read = 0;
 while(my $item_data = $sth->fetchrow_hashref()) {
     $rows_read++;
-    $count_for_item{$item_data->{'item_id'}}++;
+    $count_for_item{$item_data->{'item_id'}} += $item_data->{'count'};
 }
 # From above: The total will now be 3 item 1s 2 item 2s and 1 item 3
 is($rows_read, 6, 'Read 6 rows from the order_item_detail table');
 is(scalar(keys %count_for_item), 3, 'order_item_detail shows 2 distinct barcodes');
-is($count_for_item{'1'}, 3, 'There were 3 item "1"s');
-is($count_for_item{'2'}, 2, 'There were 2 item "2"s');
-is($count_for_item{'3'}, 1, 'There were 1 item "3"s');
+is($count_for_item{'1'}, -3, 'sold 3 item "1"s');
+is($count_for_item{'2'}, -2, 'sold 2 item "2"s');
+is($count_for_item{'3'}, -1, 'sold 1 item "3"s');
 
 my @warnings = $cmd->warning_messages();
 is(scalar(@warnings), 0, 'No warning messages');
