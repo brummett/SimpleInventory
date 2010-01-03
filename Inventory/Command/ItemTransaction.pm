@@ -59,7 +59,13 @@ sub remove_item {
     my $order = $self->order;
     my @oids = Inventory::OrderItemDetail->get(order_id => $order->id, item_id => $item->id);
     unless (@oids) {
-        Carp::croak "Order ".$self->order_number." has no item with barcode ".$item->barcode;
+        my @some = Inventory::OrderItemDetail::Ghost->get(order_id => $order->id, item_id => $item->id);
+        if (@some) {
+            $self->error_message("Tried to remove too many " . $item->desc . " from Order ".$self->order_number);
+        } else {
+            $self->error_message("Order ".$self->order_number." has no item with barcode ".$item->barcode);
+        }
+        Carp::croak "Exiting without saving";
     }
 
     my $expected_count = $self->_count_for_order_item_detail();
@@ -233,7 +239,8 @@ sub get_order_object {
     my $order = $order_type->get(order_number => $order_number);
     if ($self->append || $self->remove) {
         if ($order) {
-            $self->status_message("*** Adding items to an existing $order_type ***\n");
+            my $action = $self->append ? 'Adding' : 'Removing';
+            $self->status_message("*** $action items to an existing $order_type ***\n");
         } else {
             $self->error_message("No $order_type found with that order number");
             return;
