@@ -17,8 +17,8 @@ CREATE TABLE orders
     ( order_id integer NOT NULL PRIMARY KEY,
       order_number varchar NOT NULL UNIQUE,
       date datetime default CURRENT_TIMESTAMP,
-      order_class varchar NOT NULL REFERENCES order_class(order_class_name)
-      source varchar,
+      order_class varchar NOT NULL REFERENCES order_class(order_class_name),
+      source varchar
     );
 
 CREATE TABLE order_attributes
