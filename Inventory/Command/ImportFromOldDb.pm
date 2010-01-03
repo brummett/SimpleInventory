@@ -80,8 +80,21 @@ sub _import_orders {
             die "*** No order type for ".$row->{'type_id'};
         }
         
+        my $trans_id = $row->{'item_transaction_id'};
+        my $source;
+        if ($trans_id =~ m/^amz/ ) {
+            $source = 'amazon';
+        } elsif ($trans_id =~ m/^web/) {
+            $source = 'web';
+        } elsif ($trans_id =~ m/^ebay/) {
+            $source = 'ebay';
+        } elsif ($trans_id =~ m/^iof/) {
+            $source = 'ioffer';
+        }
+ 
         my $o = $type->create(order_number => $row->{'item_transaction_id'},
-                              date         => $row->{'date'});
+                              date         => $row->{'date'},
+                              source       => $source);
         unless ($o) {
             printf("*** order number %s date %s",@$row->{'item_transaction_id','date'});
             die "Can't create $type";
