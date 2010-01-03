@@ -46,20 +46,6 @@ $DB::single=1;
     my $prior_order = Inventory::Order->get(order_number => $first_line[0]);
     next if ($prior_order);  # We've already done something with this order
                                          
-#    my @lines_to_process;
-#    while (my $line = $input->getline) {
-#        chomp $line;
-#        last unless ($line);
-#
-#        my @line = split(/\t/, $line);
-#        # Expediteds get filled first
-#        if ($line[15] =~ m/expedited/i) {
-#            unshift(@lines_to_process, \@line);
-#        } else {
-#            push(@lines_to_process, \@line);
-#        }
-#    }
-
     my $count = 0;
     while (my $line = $input->getline) {
         chomp $line;
