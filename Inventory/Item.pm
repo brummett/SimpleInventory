@@ -14,7 +14,7 @@ class Inventory::Item {
         barcode => { is => 'varchar' },
         desc    => { is => 'varchar', is_optional => 1 },
         sku     => { is => 'varchar' },
-        count   => { is_calculated => 1 },
+        count   => { is => 'Number', is_calculated => 1 },
 
         order_item_details => { is => 'Inventory::OrderItemDetail', reverse_as => 'item', is_many => 1 },
         orders             => { is => 'Inventory::Order', via => 'order_item_details', to => 'order', is_many => 1 },

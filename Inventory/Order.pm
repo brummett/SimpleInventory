@@ -21,8 +21,8 @@ class Inventory::Order {
 
         item_details            => { is => 'Inventory::OrderItemDetail', reverse_as => 'order', is_many => 1 },
         items                   => { is => 'Inventory::Item', via => 'item_details', to => 'item', is_many => 1},
-        item_detail_count       => { is_calculated => 1 },
-        item_count              => { is_calculated => 1 },
+        item_detail_count       => { is => 'Integer', is_calculated => 1 },
+        item_count              => { is => 'Integer', is_calculated => 1 },
 
     ],
     schema_name => 'Inventory',

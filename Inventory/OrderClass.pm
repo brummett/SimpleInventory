@@ -11,6 +11,9 @@ class Inventory::OrderClass {
     id_by => [
         order_class_name => { is => 'varchar' },
     ],
+    has => [
+        name => { is => 'String', is_calculated => 1 },
+    ],
     schema_name => 'Inventory',
     data_source => 'Inventory::DataSource::Inventory',
 };
