@@ -1,0 +1,50 @@
+CREATE TABLE item
+    ( item_id integer NOT NULL PRIMARY KEY,
+      barcode varchar NOT NULL UNIQUE,
+      sku varchar NOT NULL UNIQUE,
+      desc varchar);
+
+CREATE TABLE order_class
+    ( order_class_name varchar PRIMARY KEY NOT NULL );
+INSERT INTO order_class values ('Inventory::Order::Sale');
+INSERT INTO order_class values ('Inventory::Order::Purchase');
+INSERT INTO order_class values ('Inventory::Order::Expiration');
+INSERT INTO order_class values ('Inventory::Order::InventoryCorrection');
+INSERT INTO order_class values ('Inventory::Order::PurchaseOrder');
+
+CREATE TABLE orders
+    ( order_id integer NOT NULL PRIMARY KEY,
+      order_number varchar NOT NULL UNIQUE,
+      date datetime default CURRENT_TIMESTAMP,
+      order_class varchar NOT NULL REFERENCES order_class(order_class_name)
+    );
+
+CREATE TABLE order_item_detail
+    ( order_item_detail_id integer PRIMARY KEY NOT NULL,
+      order_id integer NOT NULL REFERENCES orders(order_id),
+      item_id integer NOT NULL REFERENCES item(item_id),
+      count integer NOT NULL,
+      UNIQUE (order_item_detail_id, item_id)
+    );
+
+-- CREATE VIEW order_items AS 
+--    select order_id, item_id, count(*)
+--    from order_item_detail
+--    group by item_id;
+
+CREATE TABLE item_attribute
+    ( item_attribute_id integer PRIMARY KEY NOT NULL,
+      item_id integer NOT NULL REFERENCES item(item_id),
+      name varchar NOT NULL,
+      value varchar,
+      application varchar NOT NULL
+    );
+
+-- CREATE VIEW inventory AS
+--    select i.item_id, i.barcode, i.sku, i.desc, count(*)
+--    from item i
+--    join order_item_detail oi on i.item_id = oi.item_id
+--    join orders on oi.order_id = orders.order_id
+--    where orders.order_class != 'Inventory::Order::PurchaseOrder'
+--    group by i.item_id;
+    

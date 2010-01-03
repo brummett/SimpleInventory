@@ -1,0 +1,5 @@
+# Ignore vi swap files
+.*.swp
+
+# Ignore sqlite databases
+*.sqlite3
