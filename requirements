@@ -1,11 +1,3 @@
-Have a way to add/remove items from an already checked out order
-
-Cancel an order that had already been processed with ship
-
-Alter an already received order add/remove items in error
-
-New program to record a physical inventory, report differences and accept/reject corrections
-
 GUI tools for shipping/receiving
 
 Get the greasemonkey script for order number barcodes working
@@ -22,7 +14,6 @@ Alter query tool to also print info for unreceived purchase orders
 Program to input file with orders from amazon - generate pick report plus items with not enough inventory
 
 DB changes:
-* program to migrate DB to newer version
 * hangoff table to store amazon attributes, and shelf location, weight
 * table to record purchase orders - items ordered but not yet received
 
@@ -30,4 +21,15 @@ DB changes:
 Find a laser printer!!!!
 HP laserjet 4 or 5 with network card
 
+Done
+-------------------------------------
+Have a way to add/remove items from an already checked out order
+
+Cancel an order that had already been processed with ship
+
+Alter an already received order add/remove items in error
+
+New program to record a physical inventory, report differences and accept/reject corrections
+
+* program to migrate DB to newer version
 
