@@ -22,4 +22,11 @@ class Inventory::OrderItemDetail {
     data_source => 'Inventory::DataSource::Inventory',
 };
 
+sub attr_value {
+    my($self,$name) = @_;
+    my $attr = Inventory::OrderItemDetailAttribute->get(order_item_detail_id => $self->id, name => $name);
+    return unless $attr;
+    return $attr->value;
+}
+
 1;

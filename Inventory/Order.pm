@@ -29,6 +29,15 @@ class Inventory::Order {
     data_source => 'Inventory::DataSource::Inventory',
 };
 
+
+# when computing $item->count(), should this kind of order
+# be included in the total.  Usually yes, but don't count pick lists or 
+# purchase orders
+sub should_count_items {
+    1;
+}
+
+
 sub add_item {
     my $class = shift;
     $class = ref($class) if ref($class);
@@ -54,10 +63,18 @@ sub count_for_item {
     my($self, $item) = @_;
     
     my $count = 0;
-    foreach my $detail ( $self->item_details ) {
-        $count++ if ($detail->item eq $item);
+    foreach my $detail ( Inventory::OrderItemDetail->get(order_id => $self->id, item_id => $item->id)) {
+        $count += $detail->count;
     }
 
     return $count;
 }
+
+sub attr_value {
+    my($self,$name) = @_;
+    my $attr = Inventory::OrderAttribute->get(order_id => $self->order_id, name => $name);
+    return unless $attr;
+    return $attr->value;
+}
+
 1;

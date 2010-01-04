@@ -19,7 +19,6 @@ class Inventory::Command::Amazon::ImportOrders {
 sub execute {
     my $self = shift;
 
-$DB::single=1;
     my $file = $self->file;
     my $input;
     if (ref($file) and (ref($file) eq 'GLOB' or $file->can('getline'))) {
@@ -71,6 +70,7 @@ $DB::single=1;
             }
 
             $order->add_attribute(name => 'recipient_name', value => $recepient_name);
+            $order->add_attribute(name => 'buyer_email', value => $buyer_email);
             $order->add_attribute(name => 'ship_address_1', value => $ship_addr_1);
             $order->add_attribute(name => 'ship_address_2', value => $ship_addr_2);
             $order->add_attribute(name => 'ship_address_3', value => $ship_addr_3);
@@ -80,6 +80,7 @@ $DB::single=1;
             $order->add_attribute(name => 'ship_country', value => $ship_country);
             $order->add_attribute(name => 'ship_phone', value => $ship_phone);
             $order->add_attribute(name => 'ship_service_level', value => $ship_service_level);
+            $order->add_attribute(name => 'purchase_date', value => $purchase_date);
         }
 
         my $item = Inventory::Item->get(sku => $sku);
@@ -89,15 +90,20 @@ $DB::single=1;
         }
 
         for (my $i = 0; $i < $quantity; $i++) {
+if (! $ENV{'INVENTORY_TEST'} and $quantity > 1) {
+die "Quantity $quantity on order $order_number order_item_id $order_item_id!!  Check the item_price column and adjust PrintPickList->print_order!!!"
+}
             my $detail = $order->add_item($item);
             unless ($detail) {
                 $self->error_message("Couldn't add item with sku $sku to order $order_number");
                 die "Exiting without saving";
             }
+            # Used later to create the file to upload to amazon confirming the orders shipping out
             $detail->add_attribute(name => 'order_item_id', value => $order_item_id);
+            $detail->add_attribute(name => 'item_price', value => $item_price);
+            $detail->add_attribute(name => 'shipping_price', value => $shipping_price);
         }
 
-        # Used later to create the file to upload to amazon confirming the orders shipping out
     }
 
     $self->status_messages("Created pick list order for $count orders\n");
