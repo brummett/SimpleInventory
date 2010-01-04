@@ -20,7 +20,6 @@ class Inventory::Command::PrintPickList {
 sub execute {
     my $self = shift;
 
-$DB::single=1;
     my $output = IO::File->new($self->file, 'w');
     unless ($output) {
         $self->error_message("Can't open ".$self->file." for writing: $!");
@@ -192,7 +191,7 @@ sub print_order {
 
     $fh->print($items_string);
 
-    $fh->print("\n\n");
+    $fh->print("\n" . '-' x 50 . "\n");
 
     return 1;
 }
