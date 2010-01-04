@@ -27,10 +27,13 @@ class Inventory::Item {
 sub count {
     my $self = shift;
 
-    my @details = $self->order_item_details;
     my $sum = 0;
-    $sum += $_->count foreach @details;
+    my %orders = map { $_->id => $_ } $self->orders;
 
+    foreach my $order ( values %orders ) {
+        next unless $order->should_count_items;
+        $sum += $self->count_for_order($order);
+    }
     return $sum;
 }
 
@@ -56,6 +59,17 @@ sub history_as_string {
     }
 
     return join("\n", @strings);
+}
+
+sub attr_value {
+    my($self, $name, $application) = @_;
+
+    my %params = (item_id => $self->id, name => $name);
+    $params{'application'} = $application if defined $application;
+
+    my $attr = Inventory::ItemAttribute->get(%params);
+    return unless $attr;
+    return $attr->value;
 }
 
 
