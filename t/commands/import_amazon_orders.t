@@ -11,7 +11,7 @@ use warnings;
 use Test::More;
 use above 'Inventory';
 
-plan tests => 16;
+plan tests => 49;
 
 my $dbh = &setup_db();
 
