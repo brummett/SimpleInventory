@@ -116,7 +116,7 @@ sub execute {
         return 0;
     }
 
-    if(my @problem_items = $self->check_order_for_items_below_zero_count($order)) {
+    if (my @problem_items = $self->check_order_for_items_below_zero_count($order)) {
        $self->orders_report_on_items(\@problem_items);
     }
 
@@ -229,7 +229,12 @@ sub resolve_order_number {
     return $order_number;
 }
 
-    
+our @order_sources = (
+        [ qr/^amz/ => 'amazon' ],
+        [ qr/^web/ => 'web' ],
+        [ qr/^ebay/ => 'ebay' ],
+        [ qr/^iof/ => 'ioffer' ],
+    );
 sub get_order_object {
     my $self = shift;
 
@@ -251,7 +256,16 @@ sub get_order_object {
         return;
     
     } else {
-        $order = $order_type->create(order_number => $order_number);
+        my $source;
+        foreach my $src ( @order_sources ) {
+            my $match = $src->[0];
+            if ($src =~ $match) {
+                $source = $src->[1];
+                last;
+            }
+        }
+
+        $order = $order_type->create(order_number => $order_number, source => $source);
         unless ($order) {
             $self->error_message("Couldn't create a(n) $order_type record");
             return;
