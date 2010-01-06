@@ -10,6 +10,7 @@ sub add_item {
     my($self, $item) = @_;
 
     my $detail = $self->add_item_detail(item => $item, count => -1);
+    return $detail;
 }
 
 
