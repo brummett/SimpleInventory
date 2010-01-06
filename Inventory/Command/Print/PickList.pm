@@ -1,4 +1,4 @@
-package Inventory::Command::PrintPickList;
+package Inventory::Command::Print::PickList;
 
 use strict;
 use warnings;
@@ -7,8 +7,8 @@ use Inventory;
 
 use IO::File;
 
-class Inventory::Command::PrintPickList {
-    is => 'Inventory::Command',
+class Inventory::Command::Print::PickList {
+    is => 'Inventory::Command::Print',
     has => [
         'print' => { is => 'Boolean', default_value => 1, doc => 'Use lpr to print the list after it is generated' },
         file    => { is => 'String', default_value => 'pick_list.txt', doc => 'filename to save the list to' },
@@ -20,6 +20,7 @@ class Inventory::Command::PrintPickList {
 sub execute {
     my $self = shift;
 
+$DB::single=1;
     my $output = IO::File->new($self->file, 'w');
     unless ($output) {
         $self->error_message("Can't open ".$self->file." for writing: $!");
@@ -28,7 +29,7 @@ sub execute {
     $self->_fh($output);
  
     my @orders = Inventory::Order::PickList->get();
-    $self->status_message("Generating a list for ",scalar(@orders), " orders");
+    $self->status_message("Generating a list for ".scalar(@orders). " orders");
 
     my %orders = ( standard => [], expedited => [] );
     foreach my $order ( @orders ) {
@@ -74,20 +75,29 @@ sub execute {
         }
     }
 
-    $output->print(scalar(@filled), " orders to fill:\n\n");
-    foreach my $order ( @filled ) {
-        $self->print_order($order);
+    if (scalar(@filled)) {
+        $output->print(scalar(@filled), " orders to fill:\n\n");
+        foreach my $order ( @filled ) {
+            $self->print_order($order);
+        }
     }
 
-    $output->print("\cL", scalar(@unfilled), " orders we can't fill:\n\n");
-    foreach my $order ( @unfilled ) {
-        $self->print_order($order);
+    if (scalar(@unfilled)) {
+        $output->print("\cL", scalar(@unfilled), " orders we can't fill:\n\n");
+        foreach my $order ( @unfilled ) {
+            $self->print_order($order);
+        }
     }
 
     $output->close();
 
     if ($self->print) {
-        `lpr $output`;
+        my $file = $self->file;
+        if (-f $file && -s $file) {
+            `lpr $output`;
+        } else {
+            $self->warning_message("Pick list file $file does not exist or has 0 size, not printing");
+        }
     }
     
     return 1;

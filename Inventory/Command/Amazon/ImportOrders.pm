@@ -109,7 +109,7 @@ die "Quantity $quantity on order $order_number order_item_id $order_item_id!!  C
     $self->status_messages("Created pick list order for $count orders\n");
 
     if ($self->print) {
-        my $cmd = Inventory::Command::PrintPickList->create();
+        my $cmd = Inventory::Command::Print::PickList->create();
         if ($cmd) {
             unless ($cmd->execute()) {
                 $self->error_message("Couldn't print pick list");
