@@ -45,4 +45,26 @@ view order - Print a report about an existing order
 
 remove order - remove an order and its items from the DB
 
+amazon ... - Commands to interact with Amazon seller accounts and their files
 
+
+
+Workflow for orders from an Amazon seller account
+------------------------------------------------
+Download the New Orders report (not Unshipped Orders) to local txt file
+
+run "inv amazon import-orders --file <filename>" 
+    To create picklist orders for each amazon order
+    By default, automatically runs print pick-list unless --noprint
+
+If you use "--noprint" in the above command...
+run "inv print pick-list"
+    Creates a file called pick_list.txt in the current directory
+    By default, uses lpr to print the list, too, unless --noprint
+
+run "inv sale" or "inv fill-pick-list" 
+    Asks for order numbers and item barcodes
+
+run "inv confirm-shipping"
+    Asks for order numbers, tracking numbers, etc.
+    For amazon orders, it creates a file called amazon_confirm_upload.txt
