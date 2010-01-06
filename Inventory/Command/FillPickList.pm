@@ -5,11 +5,18 @@ use warnings;
 
 use Inventory;
 
-class Inventory::Command::Sale {
+class Inventory::Command::FillPickList {
     is => 'Inventory::Command::ItemTransaction',
     doc => 'Turn a perviously generated pick list into a sales order',
-    has => [
+    has_optional => [
         _sale => { is => 'Inventory::Order::Sale' },
+    ],
+    has => [
+        order => { is => 'Inventory::Order::PickList',
+                   calculate => q( my $order_number = $self->order_number;
+                                   my $order = Inventory::Order::PickList->get(order_number => $order_number);
+                                   return $order ),
+                 },
     ],
 };
 
@@ -65,10 +72,19 @@ sub add_item {
     my $expected_count = $self->_count_for_order_item_detail;
     my $detail = (Inventory::OrderItemDetail->get(order_id => $picklist->id, item_id => $item->id))[0];
     unless ($detail) {
-        $self->error_message(sprintf("Item %s barcode %s was not part of this pick list",
-                                     $item->desc, $item->barcode));
+        my @already_scanned = Inventory::OrderItemDetail->get(order_id => $sale->id, item_id => $item->id);
+        if (@already_scanned) {
+            $self->error_message(sprintf("Item %s barcode %s: Pick list called for %d, this is number %d",
+                                         $item->desc,
+                                         $item->barcode,
+                                         scalar(@already_scanned),
+                                         scalar(@already_scanned) + 1));
+        } else {
+            $self->error_message(sprintf("Item %s barcode %s was not part of this pick list",
+                                         $item->desc, $item->barcode));
+        }
         Inventory::Util->play_sound('error');
-        return;
+        die "Exiting without saving";
     }
 
     if ($detail->count == $expected_count) {
