@@ -20,7 +20,7 @@ sub execute {
     unless ($self->order_number) {
         $DB::single=1;
         my @params = $self->bare_args();
-        $self->order_number(@params);
+        $self->order_number($params[0]);
     }
 
     my $order = $self->order();
