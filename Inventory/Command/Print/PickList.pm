@@ -94,7 +94,7 @@ $DB::single=1;
     if ($self->print) {
         my $file = $self->file;
         if (-f $file && -s $file) {
-            `lpr $output`;
+            `lpr $file`;
         } else {
             $self->warning_message("Pick list file $file does not exist or has 0 size, not printing");
         }
