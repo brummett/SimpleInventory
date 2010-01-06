@@ -5,6 +5,8 @@ use warnings;
 
 use Inventory;
 
+use Time::HiRes;
+
 class Inventory::Util {
     is_singleton => 1,
     doc => 'Collection of useful routines',
@@ -16,19 +18,23 @@ sub verify_barcode_check_digit {
     return 1 if length($barcode) <= 4;  # Barcodes with 4 or less digits have special uses
     my @digits = split(//,$barcode);
     if (@digits != 12) {
-        $class->error_message("Excpected 12 barcide digits, got ",scalar(@digits),"\n");
+        $class->error_message("Excpected 12 barcode digits, got ",scalar(@digits),"\n");
     }
 
     my $check = pop @digits;
 
     my @even = @digits[0,2,4,6,8,10];
     my $even = 0;
-    $even += $_ foreach @even;
+    { no warnings 'uninitialized';
+      $even += $_ foreach @even;
+    }
     $even *= 3;
 
     my @odd = @digits[1,3,5,7,9];
     my $odd = 0;
-    $odd += $_ foreach @odd;
+    { no warnings 'uninitialized';
+     $odd += $_ foreach @odd;
+    }
 
     my $sum = $even + $odd + $check;
     if (! ($sum % 10)) {
@@ -53,9 +59,12 @@ sub play_sound {
 
     my $sound_app;
     if ($^O eq 'darwin') {
-        $sound_app = 'afplay';
+        $sound_app = '/usr/bin/true';
+        # FIXME - re-enable when we have some sound files
+        #$sound_app = 'afplay';
     } elsif ($^O eq 'linux') {
-        $sound_app = 'mpg123';
+        #$sound_app = 'mpg123';
+        $sound_app = '/bin/true';
     } else {
         print STDOUT "\cG";  # bell
     }
@@ -71,6 +80,7 @@ sub play_sound {
     if ($sound_app) {
         system("$sound_app $sound_file &");  # play in the background
     }
+    sleep(0.25);
 
     # VT100 set normal video
     print STDOUT "[?5l";
