@@ -11,7 +11,7 @@ use POSIX;
 class Inventory::Command::ConfirmShipping {
     is => 'Inventory::Command',
     has => [
-        amazon_file => { is => 'String', default_value => 'amazon_confirm_upload.txt', doc => 'file to hold amazon upload info' },
+        amazon_file => { is => 'String', default_value => 'amazon_confirm_upload.csv', doc => 'file to hold amazon upload info' },
     ],
     has_optional => [ 
         order_number => { is => 'ARRAY' },
@@ -46,6 +46,12 @@ sub execute {
             next;
         }
 
+        my $track_attr = Inventory::OrderAttribute->get(order_id => $order->id, name => 'tracking_number');
+        if ($track_attr) {
+            $self->error_message("That order already has a tracking number: ".$track_attr->value);
+            next;
+        }
+ 
         my $tracking_number = $self->_get_next_from('tracking_number');
         unless ($tracking_number and length($tracking_number)) {
             $self->status_message('Skipping that order');

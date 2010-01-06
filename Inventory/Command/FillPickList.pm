@@ -149,9 +149,16 @@ sub execute {
         unless ($picklist and $sale) {
             die "picklist or sale were missing :(.  Exiting without saving";
         }
+
+        # Move any attributes from the picklist over to the sale
+        my @attrs = $picklist->attributes();
+        foreach my $attr ( @attrs ) {
+            $attr->order_id($sale->id);
+        }
+        # finally, remove the now empty picklist
+        $picklist->delete();
         
         $self->status_message("Saving changes!");
-        $picklist->delete();
     }
 
     return $ret;

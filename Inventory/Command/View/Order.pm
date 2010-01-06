@@ -25,7 +25,7 @@ sub execute {
 
     my $order = $self->order();
     unless ($order) {
-        $self->error_message("Couldn't find an order with that order number");
+        $self->error_message("Couldn't find an order with order number '" . $self->order_number . "'");
         return;
     }
 
@@ -36,11 +36,13 @@ sub execute {
                                   $order->item_detail_count,
                                   $order->item_count));
 
+    $self->status_message("Attributes:");
     my @attrs = $order->attributes();
     foreach my $attr ( @attrs ) {
-        printf("%s\t=>%s\n", $attr->name, $attr->value);
+        $self->status_message(sprintf("%s\t=> %s\n", $attr->name, $attr->value));
     }
 
+    $self->status_message("Items:");
     my %items = map { $_->id => $_ } $order->items;
     foreach my $item ( values %items ) {
         $self->status_message(sprintf("\t(%2d)  %s\t%s\n",

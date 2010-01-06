@@ -15,10 +15,11 @@ INSERT INTO order_class values ('Inventory::Order::PickList');
 
 CREATE TABLE orders
     ( order_id integer NOT NULL PRIMARY KEY,
-      order_number varchar NOT NULL UNIQUE,
+      order_number varchar NOT NULL,
       date datetime default CURRENT_TIMESTAMP,
       order_class varchar NOT NULL REFERENCES order_class(order_class_name),
-      source varchar
+      source varchar,
+      UNIQUE (order_number, order_class)
     );
 
 CREATE TABLE order_attributes

@@ -42,9 +42,6 @@ sub execute {
         return;
     }
 
-    my $prior_order = Inventory::Order->get(order_number => $first_line[0]);
-    next if ($prior_order);  # We've already done something with this order
-                                         
     my $count = 0;
     while (my $line = $input->getline) {
         chomp $line;
@@ -59,7 +56,12 @@ sub execute {
            $ship_phone, $delivery_start_date, $delivery_end_date, $delivery_time_zone,
            $delivery_instructions) = @this_line;
 
-        my $order = Inventory::Order::PickList->get(order_number => $order_number);
+        my $order = Inventory::Order->get(order_number => $order_number);
+        unless ($order->isa('Inventory::Order::PickList')) {
+            $self->status_message("Skipping already processed order $order_number");
+            next;
+        }
+
         unless ($order) {
             $count++;
             $order = Inventory::Order::PickList->create(order_number => $order_number,

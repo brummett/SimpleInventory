@@ -124,4 +124,5 @@ INSERT INTO "dd_unique_constraint_column" VALUES('Inventory::DataSource::Invento
 INSERT INTO "dd_unique_constraint_column" VALUES('Inventory::DataSource::Inventory','','ORDER_ITEM_DETAIL','sqlite_autoindex_order_item_detail_1','order_item_detail_id');
 INSERT INTO "dd_unique_constraint_column" VALUES('Inventory::DataSource::Inventory','','ORDERS','sqlite_autoindex_orders_1','order_number');
 INSERT INTO "dd_unique_constraint_column" VALUES('Inventory::DataSource::Inventory','','ITEM','sqlite_autoindex_item_2','sku');
+INSERT INTO "dd_unique_constraint_column" VALUES('Inventory::DataSource::Inventory','','ORDERS','sqlite_autoindex_orders_1','order_class');
 COMMIT;
