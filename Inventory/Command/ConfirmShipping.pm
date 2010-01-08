@@ -161,7 +161,7 @@ sub _get_next_from {
     $source =~ s/_/ /;  # Get rid of the underscore for prompting the user
     print "Next $source: " unless ($ENV{'INVENTORY_TEST'});
     my $next = <STDIN>;
-    chomp $next;
+    chomp $next if $next;
 
     return $next;
 }

@@ -185,7 +185,7 @@ sub print_order {
     $ship_service = uc($ship_service) if (lc($ship_service) eq 'expedited');
     $fh->printf("%s order number %s on %s   %s shipping \$%-6.2f\n",
                 $source, $order_number, $order->attr_value('purchase_date'), $ship_service, $shipping_total);
-    $fh->printf("%-30s box number:            weight:            \n",$order->attr_value('recipient_name'));
+    $fh->printf("%-30s box number:            weight:          lb         oz\n",$order->attr_value('recipient_name'));
     $fh->printf("%-30s\n", $order->attr_value('ship_address_1'));
     $fh->printf("%-30s phone: %s  Invoice num:\n", $order->attr_value('ship_address_2'), $order->attr_value('ship_phone'));
     $fh->printf("%-30s\n", $order->attr_value('ship_address_3')) if ($order->attr_value('ship_address_3'));

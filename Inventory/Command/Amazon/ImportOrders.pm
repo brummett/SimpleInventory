@@ -42,28 +42,31 @@ sub execute {
         return;
     }
 
-    my $count = 0;
+    my %order_for_number;
+    my @parsed_lines;
+
+    FILE_LINE:
     while (my $line = $input->getline) {
         chomp $line;
         next unless $line;
 
-        my @this_line = split(/\t/,$line);
+        my %this_line;
+        @this_line{qw(order_number order_item_id purchase_date payments_date buyer_email
+                      buyer_name buyer_phone sku product_name quantity currency item_price
+                      item_tax shipping_price shipping_tax ship_service_level recepient_name
+                      ship_addr_1 ship_addr_2 ship_addr_3 ship_city ship_state ship_zip ship_country
+                      ship_phone delivery_start_date delivery_end_date delivery_time_zone
+                      delivery_instructions)} = split(/\t/,$line);
 
-        my($order_number, $order_item_id, $purchase_date, $payments_date, $buyer_email,
-           $buyer_name, $buyer_phone, $sku, $product_name, $quantity, $currency, $item_price,
-           $item_tax, $shipping_price, $shipping_tax, $ship_service_level, $recepient_name,
-           $ship_addr_1, $ship_addr_2, $ship_addr_3, $ship_city, $ship_state, $ship_zip, $ship_country,
-           $ship_phone, $delivery_start_date, $delivery_end_date, $delivery_time_zone,
-           $delivery_instructions) = @this_line;
-
-        my $order = Inventory::Order->get(order_number => $order_number);
-        unless ($order->isa('Inventory::Order::PickList')) {
-            $self->status_message("Skipping already processed order $order_number");
-            next;
-        }
-
-        unless ($order) {
-            $count++;
+        my $order_number = $this_line{'order_number'};
+        my %warned;
+        unless ($order_for_number{$order_number}) {
+            my $order = Inventory::Order->get(order_number => $order_number);
+            if ($order and !$warned{$order_number}) {
+                $self->warning_message("Skipping already processed order $order_number");
+                $warned{$order_number} = 1;
+                next FILE_LINE;
+            }
             $order = Inventory::Order::PickList->create(order_number => $order_number,
                                                         source => 'amazon');
             unless ($order) {
@@ -71,29 +74,44 @@ sub execute {
                 die "Exiting without saving";
             }
 
-            $order->add_attribute(name => 'recipient_name', value => $recepient_name);
-            $order->add_attribute(name => 'buyer_email', value => $buyer_email);
-            $order->add_attribute(name => 'ship_address_1', value => $ship_addr_1);
-            $order->add_attribute(name => 'ship_address_2', value => $ship_addr_2);
-            $order->add_attribute(name => 'ship_address_3', value => $ship_addr_3);
-            $order->add_attribute(name => 'ship_city', value => $ship_city);
-            $order->add_attribute(name => 'ship_state', value => $ship_state);
-            $order->add_attribute(name => 'ship_zip', value => $ship_zip);
-            $order->add_attribute(name => 'ship_country', value => $ship_country);
-            $order->add_attribute(name => 'ship_phone', value => $ship_phone);
-            $order->add_attribute(name => 'ship_service_level', value => $ship_service_level);
-            $order->add_attribute(name => 'purchase_date', value => $purchase_date);
+            $order->add_attribute(name => 'recipient_name', value => $this_line{'recepient_name'});
+            $order->add_attribute(name => 'buyer_email', value => $this_line{'buyer_email'});
+            $order->add_attribute(name => 'ship_address_1', value => $this_line{'ship_addr_1'});
+            $order->add_attribute(name => 'ship_address_2', value => $this_line{'ship_addr_2'});
+            $order->add_attribute(name => 'ship_address_3', value => $this_line{'ship_addr_3'});
+            $order->add_attribute(name => 'ship_city', value => $this_line{'ship_city'});
+            $order->add_attribute(name => 'ship_state', value => $this_line{'ship_state'});
+            $order->add_attribute(name => 'ship_zip', value => $this_line{'ship_zip'});
+            $order->add_attribute(name => 'ship_country', value => $this_line{'ship_country'});
+            $order->add_attribute(name => 'ship_phone', value => $this_line{'ship_phone'});
+            $order->add_attribute(name => 'ship_service_level', value => $this_line{'ship_service_level'});
+            $order->add_attribute(name => 'purchase_date', value => $this_line{'purchase_date'});
+
+            $order_for_number{$order_number} = $order;
         }
 
+        push @parsed_lines, \%this_line;
+    }
+
+    foreach my $line ( @parsed_lines ) {
+        my $order_number = $line->{'order_number'};
+        my $order = $order_for_number{$order_number};
+        unless ($order) {
+            $self->error_message("Could not recall order record for order number $order_number");
+            die "Exiting without saving";
+        }
+
+        my $sku = $line->{'sku'};
         my $item = Inventory::Item->get(sku => $sku);
         unless ($item) {
             $self->error_message("Couldn't find item with sku $sku for order number $order_number");
             die "Exiting without saving";
         }
 
-        for (my $i = 0; $i < $quantity; $i++) {
-if (! $ENV{'INVENTORY_TEST'} and $quantity > 1) {
-die "Quantity $quantity on order $order_number order_item_id $order_item_id!!  Check the item_price column and adjust PrintPickList->print_order!!!"
+        
+        for (my $i = 0; $i < $line->{'quantity'}; $i++) {
+if (! $ENV{'INVENTORY_TEST'} and $line->{'quantity'} > 1) {
+die "Quantity greater than 1 on order $order_number order_item_id " . $line->{'order_item_id'} . "!!  Check the item_price column and adjust PrintPickList->print_order!!!"
 }
             my $detail = $order->add_item($item);
             unless ($detail) {
@@ -101,14 +119,14 @@ die "Quantity $quantity on order $order_number order_item_id $order_item_id!!  C
                 die "Exiting without saving";
             }
             # Used later to create the file to upload to amazon confirming the orders shipping out
-            $detail->add_attribute(name => 'order_item_id', value => $order_item_id);
-            $detail->add_attribute(name => 'item_price', value => $item_price);
-            $detail->add_attribute(name => 'shipping_price', value => $shipping_price);
+            $detail->add_attribute(name => 'order_item_id', value => $line->{'order_item_id'});
+            $detail->add_attribute(name => 'item_price', value => $line->{'item_price'});
+            $detail->add_attribute(name => 'shipping_price', value => $line->{'shipping_price'});
         }
 
     }
 
-    $self->status_messages("Created pick list order for $count orders\n");
+    $self->status_messages("Created pick list order for ".scalar(keys %order_for_number) . " orders\n");
 
     if ($self->print) {
         my $cmd = Inventory::Command::Print::PickList->create();
