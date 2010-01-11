@@ -164,6 +164,15 @@ sub orders_report_on_items {
     }
 }
 
+sub get_one_barcode {
+    my($self) = @_;
+
+    # FIXME - the input barcode should probably be a property
+    my $barcode = STDIN->getline();
+    chomp $barcode if ($barcode and length($barcode));
+    return $barcode;
+}
+
 sub scan_barcodes_for_order {
     my($self,$order) = @_;
 
@@ -171,9 +180,8 @@ sub scan_barcodes_for_order {
     SCANNING_ITEMS:
     while(1) {
         print "Scan: " unless ($ENV{'INVENTORY_TEST'});
-        my $barcode = STDIN->getline();
+        my $barcode = $self->get_one_barcode;
         last SCANNING_ITEMS unless $barcode;
-        chomp $barcode if $barcode;
         $barcode =~ s/^\s+//;
         $barcode =~ s/\s+$//;
         # +++ is used in test cases to emulate the user hitting ^D
@@ -183,7 +191,7 @@ sub scan_barcodes_for_order {
         # less than 4 char barcode fields are used for special items and
         # are obviously not barcodes
         unless (Inventory::Util->verify_barcode_check_digit($barcode)) {
-            $self->warning_message("Barcode did not scan properly");
+            $self->warning_message("Barcode did not scan properly, input line $.");
             Inventory::Util->play_sound('error');
             next;
         }
@@ -194,7 +202,7 @@ sub scan_barcodes_for_order {
         } elsif ($self->should_interrupt_for_new_barcodes) {
             $self->prompt_for_info_on_barcode($barcode);
         } else {
-            $self->status_message("unknown item, will prompt later for details");
+            $self->warning_message("unknown item on line $., will prompt later for details");
         }
         push @barcodes, $barcode;
     }

@@ -15,10 +15,17 @@ class Inventory::Util {
 sub verify_barcode_check_digit {
     my($class, $barcode) = @_;
 
-    return 1 if length($barcode) <= 4;  # Barcodes with 4 or less digits have special uses
+    return 1 if length($barcode) <= 7;  # Barcodes with 7 or less digits have special uses
+
+    if (length($barcode) == 14 and substr($barcode,0,2) eq '10') {
+        # Some Wilton barcodes have an extra '10' at the beginning
+        # and the remaining digits don't checksum either, so just return true :(
+        return 1;
+    }
+
     my @digits = split(//,$barcode);
     if (@digits != 12) {
-        $class->error_message("Excpected 12 barcode digits, got ",scalar(@digits),"\n");
+        $class->error_message("Excpected 12 barcode digits, got ".scalar(@digits)."\n");
     }
 
     my $check = pop @digits;

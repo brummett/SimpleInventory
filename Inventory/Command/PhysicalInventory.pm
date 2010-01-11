@@ -10,13 +10,39 @@ class Inventory::Command::PhysicalInventory {
     doc => 'Read in barcodes and record a physical inventory',
     has => [
         year => { is => 'Integer', doc => 'Inventory for this year - used as part of the order number'},
-        batch => { is => 'Boolean', default_value => 0, doc => 'Read a batch of barcodes from STDIN.  Prompt for new barcodes at the end instead of during' },
+    ],
+    has_optional => [
+        file => { is => 'String', doc => 'Read a batch of barcodes from this file.  Prompt for new barcodes at the end instead of during' },
+        _fh  => { is => 'IO::Handle' },
     ],
 };
 
+sub create {
+    my $class = shift;
+
+    my $self = $class->SUPER::create(@_);
+    if ($self->file) {
+        my $file = $self->file;
+        my $fh = IO::File->new($file, 'r');
+        unless ($fh) {
+            $self->error_message("Can't open $file for reading: $!");
+            return;
+        }
+        $self->_fh($fh);
+    
+        # FIXME _ investigate trapping queueing the messages and then printing them
+        # out in apply_barcodes_to_order
+        #$self->dump_error_messages(0);
+        #$self->dump_warning_messages(0);
+        #$self->dump_status_messages(0);
+    }
+
+    return $self;
+}
+
 sub should_interrupt_for_new_barcodes {
     my $self = shift;
-    return ! $self->batch;
+    $self->file ? 0 : 1;   # Don't interrupt in batch mode
 }
 
 sub _order_type_to_create {
@@ -49,13 +75,27 @@ sub resolve_order_number {
     }
     return $order_number;
 }
-    
+
+
+sub get_one_barcode {
+    my $self = shift;
+
+    if (my $fh = $self->_fh) {
+        my $line = $fh->getline();
+        chomp $line if ($line and length($line));
+        return $line;
+    } else {
+        return $self->SUPER::get_one_barcode();
+    }
+}
 
 # Instead of creating order details directly, we want to just record the
 # cases where there's a difference between the previous count and the scanned
 #  count
 sub apply_barcodes_to_order {
     my($self, $order, $barcodes) = @_;
+
+    # FIXME - here's where we'd print out any trapped status, error, warning messages
 
     my %count_for_barcode;
     foreach my $barcode ( @$barcodes ) {
@@ -66,7 +106,7 @@ sub apply_barcodes_to_order {
     my $iter = Inventory::Item->create_iterator();
     while(my $item = $iter->next()) {
         my $count = $item->count();
-        my $scanned = $count_for_barcode{$item->barcode};
+        my $scanned = $count_for_barcode{$item->barcode} || 0;
         if ($count != $scanned) {
             $correction_count++;
             my $correction = Inventory::OrderItemDetail->create(order_id => $order->id,
