@@ -161,12 +161,13 @@ sub _verify_counts {
         my $row = $sth->fetchrow_hashref();
         my $old_count = $row->{'count'};
         if ($new_count != $old_count) {
-            printf("Item barcode %s desc %s old count %d new count %d",
+            printf("Item barcode %s desc %s old count %d new count %d\n",
                    $item->barcode, $item->desc, $old_count, $new_count);
             $die = 1;
         }
     }
     die "Exiting without saving" if $die;
+    $self->status_message("Saving changes");
 
     return 1;
 }

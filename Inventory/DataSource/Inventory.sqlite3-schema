@@ -11,13 +11,24 @@ INSERT INTO order_class values ('Inventory::Order::Purchase');
 INSERT INTO order_class values ('Inventory::Order::Expiration');
 INSERT INTO order_class values ('Inventory::Order::InventoryCorrection');
 INSERT INTO order_class values ('Inventory::Order::PurchaseOrder');
+INSERT INTO order_class values ('Inventory::Order::PickList');
 
 CREATE TABLE orders
     ( order_id integer NOT NULL PRIMARY KEY,
-      order_number varchar NOT NULL UNIQUE,
+      order_number varchar NOT NULL,
       date datetime default CURRENT_TIMESTAMP,
-      order_class varchar NOT NULL REFERENCES order_class(order_class_name)
+      order_class varchar NOT NULL REFERENCES order_class(order_class_name),
+      source varchar,
+      UNIQUE (order_number, order_class)
     );
+
+CREATE TABLE order_attributes
+    ( order_attribute_id integer NOT NULL PRIMARY KEY,
+      order_id integer NOT NULL REFERENCES orders(order_id),
+      name varchar NOT NULL,
+      value varchar
+    );
+
 
 CREATE TABLE order_item_detail
     ( order_item_detail_id integer PRIMARY KEY NOT NULL,
@@ -39,6 +50,14 @@ CREATE TABLE item_attribute
       value varchar,
       application varchar NOT NULL
     );
+
+CREATE TABLE order_item_detail_attribute
+    ( order_item_detail_attribute_id integer PRIMARY KEY NOT NULL,
+      order_item_detail_id integer NOT NULL REFERENCES order_item_detail(order_item_detail_id),
+      name varchar NOT NULL,
+      value varchar
+    );
+
 
 -- CREATE VIEW inventory AS
 --    select i.item_id, i.barcode, i.sku, i.desc, count(*)

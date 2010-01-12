@@ -33,6 +33,8 @@ ok($cmd->execute(), 'executed ok');
 ok(UR::Context->commit(), 'Commit DB');
 
 # Try removing an item 3 - will die because there's no item 3s
+my $transaction = UR::Context::Transaction->begin();
+
 $cmd = Inventory::Command::Sale->create(order_number => 1234, remove => 1);
 ok($cmd, 'Created command to remove non-existent item from that sale');
 $data = qq(3
@@ -50,9 +52,11 @@ is(scalar(@errors),1, 'Got 1 error message');
 like($errors[0], qr(Order 1234 has no item with barcode 3), 'Error reported no item 3');
 like($@, qr/Exiting without saving/, 'Exception reported correctly');
 
-ok(UR::Context->rollback, 'Rollback DB after failure');
+ok($transaction->rollback, 'Rollback DB after failure');
 
 # Try removing 2 item 2s - will die because there's only 1 item 2
+$transaction = UR::Context::Transaction->begin();
+
 $cmd = Inventory::Command::Sale->create(order_number => 1234, remove => 1);
 ok($cmd, 'Created command to remove items too many items from that sale');
 $data = qq(2
@@ -71,7 +75,7 @@ is(scalar(@errors), 1, 'got 1 error message');
 like($errors[0], qr(Tried to remove too many two from order 1234), 'Error reported too many item 2 removed');
 like($@, qr/Exiting without saving/, 'Exception reported correctly');
 
-ok(UR::Context->rollback, 'Rollback DB after failure');
+ok($transaction->rollback, 'Rollback DB after failure');
 
 # Now, remove an item 1 and an item 2
 $cmd = Inventory::Command::Sale->create(order_number => 1234, remove => 1);
