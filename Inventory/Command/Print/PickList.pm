@@ -20,7 +20,6 @@ class Inventory::Command::Print::PickList {
 sub execute {
     my $self = shift;
 
-$DB::single=1;
     my $output = IO::File->new($self->file, 'w');
     unless ($output) {
         $self->error_message("Can't open ".$self->file." for writing: $!");
@@ -80,10 +79,13 @@ $DB::single=1;
         foreach my $order ( @filled ) {
             $self->print_order($order);
         }
+        $output->print("\n");
     }
 
     if (scalar(@unfilled)) {
-        $output->print("\cL", scalar(@unfilled), " orders we can't fill:\n\n");
+        $output->print("\n" . '-' x 80 . "\n");
+
+        $output->print("\cL\n", scalar(@unfilled), " orders we can't fill:\n\n");
         foreach my $order ( @unfilled ) {
             $self->print_order($order);
         }
@@ -184,7 +186,7 @@ sub print_order {
     my $ship_service = $order->attr_value('ship_service_level');
     $ship_service = uc($ship_service) if (lc($ship_service) eq 'expedited');
     $fh->printf("%s order number %s on %s   %s shipping \$%-6.2f\n",
-                $source, $order_number, $order->attr_value('purchase_date'), $ship_service, $shipping_total);
+                $source, $order_number, $order->attr_value('purchase_date'), $ship_service);
     $fh->printf("%-30s box number:            weight:          lb         oz\n",$order->attr_value('recipient_name'));
     $fh->printf("%-30s\n", $order->attr_value('ship_address_1'));
     $fh->printf("%-30s phone: %s  Invoice num:\n", $order->attr_value('ship_address_2'), $order->attr_value('ship_phone'));
@@ -200,8 +202,9 @@ sub print_order {
     $fh->print(abs($items_count), " total items:\n");
 
     $fh->print($items_string);
+    $fh->printf("\n%s shipping \$%-6.2f\n", $ship_service, $shipping_total);
 
-    $fh->print("\n" . '-' x 50 . "\n");
+    $fh->print("\n" . '-' x 80 . "\n");
 
     return 1;
 }
