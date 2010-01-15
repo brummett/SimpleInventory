@@ -140,7 +140,12 @@ sub apply_barcodes_to_order {
         $self->$apply_sub($item);
     }
 
-    return values %items;
+    if (wantarray) {
+        return values %items;
+    } else {
+        my $count = scalar(values %items) || '0 but true';
+        return $count;
+    }
 }
 
 

@@ -84,7 +84,7 @@ sub add_item {
                                          $item->desc, $item->barcode));
         }
         Inventory::Util->play_sound('error');
-        die "Exiting without saving";
+        die "Exiting without saving\n";
     }
 
     if ($detail->count == $expected_count) {
@@ -93,7 +93,7 @@ sub add_item {
     } elsif ($detail->count >= 0) {
         $self->error_message("Found an order item with non-negative count!?");
         $self->error_message(sprintf("order %s detail id %d", $picklist->order_number, $detail->id));
-        die "Exiting without saving";
+        die "Exiting without saving\n";
 
     } else {
         my $count = $detail->count();
@@ -131,9 +131,9 @@ sub orders_report_on_items {
     $self->error_message("Some items still have not been applied to the sale");
     foreach my $item ( @$problem_items ) {
         $self->status_message(sprintf("\tbarcode %s sku %s short %d %s\n",
-                                      $item->barcode, $item->sku, $item->count_for_order($order)));
+                                      $item->barcode, $item->sku, abs($item->count_for_order($order)), $item->desc));
     }
-    die "Exiting without saving";
+    die "Exiting without saving\n";
 }
 
 
@@ -143,23 +143,26 @@ sub execute {
     my $super_execute = $self->super_can('_execute_body');
     my $ret = $super_execute->($self,@_);
 
-    if ($ret) {
-        my $picklist = $self->order;
-        my $sale = $self->_sale;
-        unless ($picklist and $sale) {
-            die "picklist or sale were missing :(.  Exiting without saving";
-        }
+    my $picklist = $self->order;
+    my $sale = $self->_sale;
 
-        # Move any attributes from the picklist over to the sale
-        my @attrs = $picklist->attributes();
-        foreach my $attr ( @attrs ) {
-            $attr->order_id($sale->id);
-        }
-        # finally, remove the now empty picklist
-        $picklist->delete();
-        
-        $self->status_message("Saving changes!");
+    unless ($ret) {
+        die "Filling order failed.  Exiting without saving\n";
     }
+
+    unless ($picklist and $sale) {
+        die "picklist or sale were missing :(.  Exiting without saving\n";
+    }
+
+    # Move any attributes from the picklist over to the sale
+    my @attrs = $picklist->attributes();
+    foreach my $attr ( @attrs ) {
+        $attr->order_id($sale->id);
+    }
+    # finally, remove the now empty picklist
+    $picklist->delete();
+    
+    $self->status_message("Saving changes!");
 
     return $ret;
 }

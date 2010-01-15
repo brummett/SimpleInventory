@@ -73,6 +73,7 @@ sub execute {
                 $self->error_message("Couldn't create order record for order number $order_number");
                 die "Exiting without saving";
             }
+            $order_for_number{$order_number} = $order;
 
             $order->add_attribute(name => 'recipient_name', value => $this_line{'recepient_name'});
             $order->add_attribute(name => 'buyer_email', value => $this_line{'buyer_email'});
@@ -87,7 +88,6 @@ sub execute {
             $order->add_attribute(name => 'ship_service_level', value => $this_line{'ship_service_level'});
             $order->add_attribute(name => 'purchase_date', value => $this_line{'purchase_date'});
 
-            $order_for_number{$order_number} = $order;
         }
 
         push @parsed_lines, \%this_line;
