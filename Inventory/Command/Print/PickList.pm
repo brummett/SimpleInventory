@@ -74,6 +74,10 @@ sub execute {
         }
     }
 
+    if (@filled || @unfilled) {
+        $output->print("\t\t\tPrinted ",scalar(localtime()),"\n");
+    }
+
     if (scalar(@filled)) {
         $output->print(scalar(@filled), " orders to fill:\n\n");
         foreach my $order ( @filled ) {
