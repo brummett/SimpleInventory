@@ -115,13 +115,14 @@ sub _add_order_to_amazon_file {
 
     my %items = map { $_->id => $_ } $order->items;
     foreach my $item_id ( keys %items ) {
+        next unless $amz_order_item_ids{$item_id};  # Don't add unless that item had an amazon item ID
         my $line = join("\t",
                         $order_number,
                         $amz_order_item_ids{$item_id},
                         $item_detail_count{$item_id},
                         $ship_date,
                         $carrier_code,
-                        $carrier_name,
+                        $carrier_name || '',
                         $tracking_number,
                         $ship_method,
                       );
