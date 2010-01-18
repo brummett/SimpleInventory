@@ -55,7 +55,7 @@ sub history_as_string {
     foreach my $order ( sort { $a->id <=> $b->id } values %orders ) {
         my $kind = ucfirst( $order->order_type_name );
         my $count = $self->count_for_order($order);
-        push @strings, sprintf("%s order on %s:\t%d", $kind, $order->date, $count);
+        push @strings, sprintf("%s order %s on %s:\t%d", $kind, $order->order_number, $order->date, $count);
     }
 
     return join("\n", @strings);
