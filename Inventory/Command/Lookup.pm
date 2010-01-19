@@ -35,10 +35,14 @@ sub execute {
     push @items, Inventory::Item->get(barcode => $key);
     push @items, Inventory::Item->get('desc like' => "\%$key\%"); 
 
+    unless (@items) {
+        $self->status_message("No matching items");
+        return;
+    }
+
+    my %printed;
     foreach my $item ( @items ) {
-        my $history = $item->history_as_string();
-        $history ||= '';
-        $history =~ s/\n/\n\t/gs;
+        next unless ($printed{$item->id}++);
 
         $self->status_message(
             sprintf("Item: barcode %s sku %s count %d\n\t%s\n%s\n\n",
