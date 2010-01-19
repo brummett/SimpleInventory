@@ -42,10 +42,10 @@ sub execute {
 
     my %printed;
     foreach my $item ( @items ) {
-        next unless ($printed{$item->id}++);
+        next if ($printed{$item->id}++);
 
         $self->status_message(
-            sprintf("Item: barcode %s sku %s count %d\n\t%s\n%s\n\n",
+            sprintf("Item: barcode %s sku %s count %d\n\t%s\n\n",
                 $item->barcode, $item->sku, $item->count, $item->desc)
         );
     }
