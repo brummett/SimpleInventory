@@ -1,15 +1,16 @@
-package Inventory::Command::ImportFromOldDb;
+package Inventory::Command::System::ImportFromOldDb;
 
 use strict;
 use warnings;
 
 use Inventory;
 
-class Inventory::Command::ImportFromOldDb {
+class Inventory::Command::System::ImportFromOldDb {
     is => 'Inventory::Command',
     has => [
         db => { is => 'String', doc => 'path to old sqlite db' },
     ],
+    doc => 'Convert a SimpleInventory v1 database to v2',
 };
 
 sub execute {

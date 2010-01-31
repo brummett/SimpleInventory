@@ -2,7 +2,8 @@ CREATE TABLE item
     ( item_id integer NOT NULL PRIMARY KEY,
       barcode varchar NOT NULL UNIQUE,
       sku varchar NOT NULL UNIQUE,
-      desc varchar);
+      desc varchar,
+      active bool NOT NULL DEFAULT 1);
 
 CREATE TABLE order_class
     ( order_class_name varchar PRIMARY KEY NOT NULL );

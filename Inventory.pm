@@ -10,4 +10,9 @@ class Inventory {
     type_name => 'inventory',
 };
 
+# The current database schema version
+sub db_schema_ver {
+    return 2;
+}
+
 1;
