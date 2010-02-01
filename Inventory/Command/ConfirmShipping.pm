@@ -74,8 +74,16 @@ sub execute {
         my $date_str = POSIX::strftime("%F", localtime());  # yyyy-mm-dd
         $order->add_attribute(name => 'ship_date', value => $date_str);
 
-        if ($order->source eq 'amazon') {
+        if ($order->source and $order->source eq 'amazon') {
             $self->_add_order_to_amazon_file($order);
+        }
+    }
+
+    my @unconfirmed = Inventory::Order::Sale->get(tracking_number => undef);
+    if (@unconfirmed) {
+        $self->status_message("There are still ".scalar(@unconfirmed)." unconfirmed shipments:");
+        foreach my $order (@unconfirmed) {
+            $self->status_message("\t".$order->order_number);
         }
     }
 

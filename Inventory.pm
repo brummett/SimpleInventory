@@ -12,7 +12,7 @@ class Inventory {
 
 # The current database schema version
 sub db_schema_ver {
-    return 2;
+    return 3;
 }
 
 1;

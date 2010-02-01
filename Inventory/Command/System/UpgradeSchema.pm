@@ -66,8 +66,20 @@ sub execute {
         $current_ver = 2;
     }
 
+    if ($current_ver == 2) {
+        # confirm-shipping will now complain if there are any sale orders without
+        # tracking numbers.  Make all the current orders without a tracking number have 
+        # a placeholder instead
+        my @orders = Inventory::Order::Sale->get(tracking_number => undef);
+        foreach my $order ( @orders ) {
+            $order->add_attribute(name => 'tracking_number', value => 'unknown');
+        }
+        $current_ver = 3;
+    }
+
 
     # finally, save the version number in the table
+    $self->status_message("Upgraded schema to version $current_ver");
     $current_ver_obj->value($current_ver);
     return 1;
 }
