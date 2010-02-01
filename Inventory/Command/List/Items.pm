@@ -9,7 +9,7 @@ class Inventory::Command::List::Items {
     is => 'Inventory::Command::List',
     has => [
         subject_class_name => { default_value => 'Inventory::Item' },
-        show => { default_value => 'barcode,sku,count,desc' },
+        show => { default_value => 'barcode,sku,count,active,desc' },
     ],
     doc => 'List items in the inventory DB',
 };
