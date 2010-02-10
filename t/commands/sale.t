@@ -59,8 +59,8 @@ is($count_for_item{'2'}, 3, 'There were 3 item "2"s');
 my @warnings = $cmd->warning_messages();
 is(scalar(@warnings), 1, 'Got one warning message from the command');
 like($warnings[0], qr/Item count below 0 \(-1\):\s+two/, 'Saw warning about item two below zero');
-like($warnings[0], qr/Inventorycorrection order on .*:\s+2/, 'Saw history for inventory');
-like($warnings[0], qr/Sale order on .*:\s+-3/, 'Saw history for sale');
+like($warnings[0], qr/Inventorycorrection order foo on .*:\s+2/, 'Saw history for inventory');
+like($warnings[0], qr/Sale order 1234 on .*:\s+-3/, 'Saw history for sale');
 
 my @errors = $cmd->error_messages();
 is(scalar(@errors), 0, 'Saw no error messages');
