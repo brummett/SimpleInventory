@@ -127,7 +127,7 @@ is(scalar(@errors), 0, 'Saw no error messages');
 sub setup_db {
     my $dbh = Inventory::DataSource::Inventory->get_default_handle();
 
-    my $sth = $dbh->prepare('insert into item (item_id, barcode, sku, desc) values (?,?,?,?)');
+    my $sth = $dbh->prepare('insert into item (item_id, barcode, sku, desc, active) values (?,?,?,?,1)');
     foreach my $row ( [-1,1,1,'one'],
                       [-2,2,2,'two'],
                       [-3,3,3,'three'],
