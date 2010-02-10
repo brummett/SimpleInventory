@@ -88,6 +88,8 @@ sub execute {
     }
 
     $self->status_message("Saving changes");
+    my $fh = $self->_amazon_fh();
+    $fh->close if $fh;
     return 1;
 }
 

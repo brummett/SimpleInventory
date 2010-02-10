@@ -12,7 +12,7 @@ use Test::More;
 use File::Temp;
 use above 'Inventory';
 
-plan tests => 16;
+plan tests => 19;
 
 my $dbh = &setup_db();
 
@@ -33,6 +33,19 @@ my @warnings = $cmd->warning_messages();
 is(scalar(@errors), 0, 'There were no warnings');
 
 
+# Amazon::ImportOrders made picklists.  Convert them to regular sales orders
+# as would have been done if we completed a regular sales order...
+my @picklists = Inventory::Order::PickList->get(order_number => ['111-2222222-3333333','123-4567890-1234567','234-5678901-2345678']);
+is(scalar(@picklists), 3, 'Retrieved 3 picklists');
+foreach my $pick ( @picklists) {
+    my @items = $pick->item_details;
+    my $sale = Inventory::Order::Sale->create(order_number => $pick->order_number, source => $pick->source);
+    ok($sale, 'Converting picklist to sale order');
+    $_->order_id($sale->order_id) foreach @items;
+    $pick->delete();
+}
+    
+
 ##my($tmpfh,$tmpfile) = File::Temp::tempfile();
 ##$tmpfh->close;
 #my $tmpfile = '/tmp/pick_list.txt';
@@ -44,21 +57,19 @@ is(scalar(@errors), 0, 'There were no warnings');
 #$cmd->queue_error_messages(1);
 #ok($cmd->execute(), 'executed ok');
 
-#my($tmpfh,$tmpfile) = File::Temp::tempfile();
-#$tmpfh->close;
-my $tmpfile = '/tmp/amazon_confirm_uploadt.txt';
-$cmd = Inventory::Command::ConfirmShipping->create(amazon_file => $tmpfile);
+my($tmpfh,$amazon_upload_file) = File::Temp::tempfile();
+$tmpfh->close;
+#my $amazon_upload_file = '/tmp/amazon_confirm_upload.txt';
+$cmd = Inventory::Command::ConfirmShipping->create(amazon_file => $amazon_upload_file);
 ok($cmd, 'Created confirm shipping command');
-#$cmd->dump_warning_messages(0);
-#$cmd->dump_error_messages(0);
-#$cmd->queue_warning_messages(1);
-#$cmd->queue_error_messages(1);
+$cmd->dump_warning_messages(0);
+$cmd->dump_error_messages(0);
+$cmd->queue_warning_messages(1);
+$cmd->queue_error_messages(1);
+$cmd->dump_status_messages(0);
+$cmd->queue_status_messages(1);
 my $input = q(111-2222222-3333333
 tracking1
-
-
-123-4567890-1234567
-tracking2
 
 
 234-5678901-2345678
@@ -68,10 +79,44 @@ ground
 );
 close(STDIN);
 open(STDIN,'<',\$input);
-$ENV{'INVENTORY_TEST'} =0;
 ok($cmd->execute(), 'executed ok');
 
+my @messages = $cmd->error_messages();
+is(scalar(@messages), 0, 'Saw no error messages');
+@messages = $cmd->warning_messages();
+is(scalar(@messages), 0, 'Saw no warning messages');
+@messages = $cmd->status_messages();
+is(scalar(@messages), 3, 'Saw 3 status messages');
+like($messages[0], qr/There are still 1 unconfirmed shipments/, 'Says there is one unconfirmed shipment');
+like($messages[1], qr/123-4567890-1234567/, 'mentioned the right order number');
+like($messages[2], qr/Saving changes/, 'Says it is aving changes');
 
+# Check the contents of the amazon upload file
+ok(-f $amazon_upload_file, 'Amazon upload file exists');
+my @expected = (
+['order-id','order-item-id','quantity','ship-date','carrier-code','carrier-name','tracking-number','ship-method'],
+['111-2222222-3333333','44444444444444','2','2010-02-10','USPS','tracking1','priority'],
+['234-5678901-2345678','22222222222222','1','2010-02-10','UPS','tracking3','ground'],
+['234-5678901-2345678','33333333333333','2','2010-02-10','UPS','tracking3','ground'],
+);
+&compare_amazon_file_contents($amazon_upload_file, \@expected);
+
+1;
+
+
+sub compare_amazon_file_contents {
+    my($amazon_upload_file, $expected_data) = @_;
+
+    my $fh = IO::File->new($amazon_upload_file);
+    my $file_data = [];
+    while(my $line = $fh->getline()) {
+        chomp $line;
+        my @line = split(/\s+/,$line);
+        push @$file_data, \@line;
+    }
+
+    is_deeply($file_data, $expected_data, 'Amazon file contents is expected');
+}
 
 sub setup_db {
     my $dbh = Inventory::DataSource::Inventory->get_default_handle();
