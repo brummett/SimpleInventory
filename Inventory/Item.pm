@@ -15,7 +15,7 @@ class Inventory::Item {
         desc    => { is => 'varchar', is_optional => 1 },
         sku     => { is => 'varchar' },
         count   => { is => 'Number', is_calculated => 1 },
-        active  => { is => 'Boolean' },
+        active  => { is => 'Boolean', default_value => 1 },
 
         order_item_details => { is => 'Inventory::OrderItemDetail', reverse_as => 'item', is_many => 1 },
         orders             => { is => 'Inventory::Order', via => 'order_item_details', to => 'order', is_many => 1 },
