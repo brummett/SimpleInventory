@@ -12,7 +12,7 @@ use Test::More;
 use File::Temp;
 use above 'Inventory';
 
-plan tests => 16;
+plan tests => 30;
 
 my $dbh = &setup_db();
 
@@ -33,10 +33,10 @@ my @warnings = $cmd->warning_messages();
 is(scalar(@errors), 0, 'There were no warnings');
 
 
-#my($tmpfh,$tmpfile) = File::Temp::tempfile();
-#$tmpfh->close;
-my $tmpfile = '/tmp/pick_list.txt';
-$cmd = Inventory::Command::PrintPickList->create(file => $tmpfile, 'print' => 0);
+my($tmpfh,$picklist_file) = File::Temp::tempfile();
+$tmpfh->close;
+#my $picklist_file = '/tmp/pick_list.txt';
+$cmd = Inventory::Command::Print::PickList->create(file => $picklist_file, 'print' => 0);
 ok($cmd, 'Created picklist command');
 $cmd->dump_warning_messages(0);
 $cmd->dump_error_messages(0);
@@ -44,8 +44,42 @@ $cmd->queue_warning_messages(1);
 $cmd->queue_error_messages(1);
 ok($cmd->execute(), 'executed ok');
 
+ok(-f $picklist_file, 'Picklist file was created');
+ok(-s $picklist_file, 'File has non-zero size');
+
+my $fh = IO::File->new($picklist_file);
+my $picklist_data = do { local($/); <$fh>};
+
+my @order_data = split(/--------------------------------------------------------------------------------/, $picklist_data);
+
+like($order_data[0], qr/3 orders to fill/, 'says there are three orders to fill');
+like($order_data[0], qr/amazon order number 111-2222222-3333333.*EXPEDITED/, 'Saw first order number');
+like($order_data[0], qr/Chuck Jones/, 'Saw first customer');
+like($order_data[0], qr/2 total items/, 'correct number of total items');
+like($order_data[0], qr/\s2\s.*item two/, 'saw 2 item twos');
+
+like($order_data[1], qr/amazon order number 123-4567890-1234567.*Standard/, 'Saw second order number');
+like($order_data[1], qr/Bob Smith/, 'Saw second customer');
+like($order_data[1], qr/1 total items/, 'correct number of total items');
+like($order_data[1], qr/\s1\s.*item one/, 'saw 1 item one');
+
+like($order_data[2], qr/amazon order number 234-5678901-2345678.*Standard/, 'Saw first order number');
+like($order_data[2], qr/Bob Jones/, 'Saw third customer');
+like($order_data[2], qr/3 total items/, 'correct number of total items');
+like($order_data[2], qr/\s1\s.*item one/, 'saw 1 item one');
+like($order_data[2], qr/\s2\s.*item two/, 'saw 2 item twos');
+
+unlike($order_data[3], qr/\S/, 'Saw empty space between orders we can fill and that we cannot fill');
+
+like($order_data[4], qr/1 orders we can't fill/, 'Saw 1 order we cannot fill');
+like($order_data[4], qr/amazon order number 222-3333333-4444444/, 'Saw order number');
+like($order_data[4], qr/John Johnson/, 'Saw customer');
+like($order_data[4], qr/4 total items/, 'correct number of total items');
+like($order_data[4], qr/\sOUT 1\s.*item one/, 'saw item one');
+like($order_data[4], qr/\sOUT 2\s.*item two/, 'saw item two');
 
 
+1;
 sub setup_db {
     my $dbh = Inventory::DataSource::Inventory->get_default_handle();
 
