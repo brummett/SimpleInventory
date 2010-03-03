@@ -236,7 +236,7 @@ sub next_line {
     $self->_handle->print("\n");
 }
 
-sub text_list_for_order {
+sub print_order {
     my($self,$order) = @_;
 
     my @text;
@@ -302,15 +302,6 @@ sub text_list_for_order {
     push @text, sprintf(" " x 30 . "%s shipping \$%-6.2f" . " " x 20 . "Total \$%-6.2f",
                         $ship_service, $shipping_total, $money_total);
 
-    return @text;
-}
-
-
-
-sub print_order {
-    my($self, $order) = @_;
-
-    my @text = $self->text_list_for_order($order);
     $self->_handle->print(join("\n", @text),"\n", '-' x 80, "\n");
 }
         
@@ -361,7 +352,7 @@ sub next_line {
     $self->_handle->next_line();
 }
 
-sub text_list_for_order {
+sub print_order {
     my($self,$order) = @_;
 
     my @text;
@@ -426,16 +417,6 @@ sub text_list_for_order {
     $ship_service = uc($ship_service) if (lc($ship_service) eq 'expedited');
     push @text, sprintf(" " x 30 . "%s shipping \$%-6.2f" . " " x 20 . "Total \$%-6.2f",
                         $ship_service, $shipping_total, $money_total);
-
-    return @text;
-}
-
-
-
-sub print_order {
-    my($self,$order) = @_;
-
-    my @text = $self->text_list_for_order($order);
 
     my $handle = $self->_handle;
 
