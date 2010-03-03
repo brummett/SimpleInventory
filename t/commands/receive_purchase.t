@@ -16,15 +16,14 @@ my $cmd = Inventory::Command::ReceivePurchase->create(order_number => 1234);
 ok($cmd, 'Instantiated command object');
 # Insert 3 item 1s and 2 item 2s
 my $data = qq(1 
-1
-1
-2
-2
-+++
 one
 first
+1
+1
+2
 two
 second
+2
 );
 close(STDIN);
 open(STDIN,'<',\$data);
