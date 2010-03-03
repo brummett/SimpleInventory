@@ -18,4 +18,8 @@ sub _count_for_order_item_detail {
     1;
 }
 
+sub should_interrupt_for_new_barcodes {
+    1;
+}
+
 1;
