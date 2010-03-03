@@ -93,11 +93,12 @@ like($messages[2], qr/Saving changes/, 'Says it is aving changes');
 
 # Check the contents of the amazon upload file
 ok(-f $amazon_upload_file, 'Amazon upload file exists');
+my $date_str = POSIX::strftime("%F", localtime());  # yyyy-mm-dd
 my @expected = (
 ['order-id','order-item-id','quantity','ship-date','carrier-code','carrier-name','tracking-number','ship-method'],
-['111-2222222-3333333','44444444444444','2','2010-02-10','USPS','tracking1','priority'],
-['234-5678901-2345678','22222222222222','1','2010-02-10','UPS','tracking3','ground'],
-['234-5678901-2345678','33333333333333','2','2010-02-10','UPS','tracking3','ground'],
+['111-2222222-3333333','44444444444444','2',$date_str,'USPS','tracking1','priority'],
+['234-5678901-2345678','22222222222222','1',$date_str,'UPS','tracking3','ground'],
+['234-5678901-2345678','33333333333333','2',$date_str,'UPS','tracking3','ground'],
 );
 &compare_amazon_file_contents($amazon_upload_file, \@expected);
 
