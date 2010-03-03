@@ -56,7 +56,7 @@ CREATE TABLE order_item_detail_attribute
 
 CREATE TABLE settings
     ( setting_id integer PRIMARY KEY NOT NULL,
-      name integer NOT NULL,
+      name varchar NOT NULL,
       value varchar
     );
 

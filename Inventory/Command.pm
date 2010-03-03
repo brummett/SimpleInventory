@@ -13,7 +13,7 @@ sub create {
     my($class,@params) = @_;
 
     my $wanted_schema_ver = Inventory->db_schema_ver;
-    my $current_schema_obj = Inventory::Setting->get(name => 'DB_schema_version');
+    my $current_schema_obj = eval { Inventory::Setting->get(name => 'DB_schema_version') };
     my $current_schema_ver = $current_schema_obj ? $current_schema_obj->value : 0;
 
     if ($class eq 'Inventory::Command::System::UpgradeSchema' or $wanted_schema_ver == $current_schema_ver) {

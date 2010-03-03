@@ -18,7 +18,7 @@ sub help_detail {
     my $self = shift;
 
     my $latest_ver = Inventory->db_schema_ver;
-    my $current_ver_obj = Inventory::Setting->get(name => 'DB_schema_version');
+    my $current_ver_obj = eval { Inventory::Setting->get(name => 'DB_schema_version') };
     my $current_ver = $current_ver_obj ? $current_ver_obj->value : 0;
 
     my $should_upgrade = $current_ver < $latest_ver
@@ -38,7 +38,10 @@ sub execute {
     $DB::single=1;
 
     my $latest_ver = Inventory->db_schema_ver;
-    my $current_ver_obj = Inventory::Setting->get(name => 'DB_schema_version');
+    my $current_ver_obj = eval { Inventory::Setting->get(name => 'DB_schema_version') };
+    if (! $current_ver_obj) {
+         $self->status_message("You can ignore the above errors about 'no such table: SETTINGS'");
+    }
     my $current_ver = $current_ver_obj ? $current_ver_obj->value : 0;
 
     if ($current_ver > $latest_ver) {
@@ -49,13 +52,20 @@ sub execute {
         return 1;
     }
 
+    $self->status_message("Currently at database version $current_ver");
+    my $dbh = Inventory::DataSource::Inventory->get_default_handle;
+
     if ($current_ver == 0) {
         # Version "0" where we didn't have a version stored in the schema
+        unless($dbh->do('CREATE TABLE IF NOT EXISTS settings (setting_id integer PRIMARY KEY NOT NULL, name varchar NOT NULL, value varchar)')) {
+            $self->error_message("Can't create SETTINGS table: $DBI::errstr");
+            return;
+        }
         $current_ver_obj = Inventory::Setting->create(name => 'DB_schema_version', value => 1);
         $current_ver = 1;
+        $self->status_message("Upgraded to schema version 1");
     }
 
-    my $dbh = Inventory::DataSource::Inventory->get_default_handle;
     if ($current_ver == 1) {
          # Add a new column to flag an item inactive
         if ($dbh->do("alter table item add column active bool NOT NULL DEFAULT 1")) {
@@ -64,6 +74,7 @@ sub execute {
             $self->error_message("Can't add column active to item table: $DBI::errstr");
         }
         $current_ver = 2;
+        $self->status_message("Upgraded to schema version 2");
     }
 
     if ($current_ver == 2) {
@@ -75,11 +86,12 @@ sub execute {
             $order->add_attribute(name => 'tracking_number', value => 'unknown');
         }
         $current_ver = 3;
+        $self->status_message("Upgraded to schema version 3");
     }
 
 
     # finally, save the version number in the table
-    $self->status_message("Upgraded schema to version $current_ver");
+    $self->status_message("Upgrade complete.  Now at database schema version $current_ver");
     $current_ver_obj->value($current_ver);
     return 1;
 }
