@@ -239,16 +239,34 @@ sub next_line {
 sub print_order {
     my($self,$order) = @_;
 
-    my @text;
-
     my $source = $order->source;
     my $order_number = $order->order_number;
-    my @details = $order->item_details;
-
-    my $items_count = 0;
-    $items_count += $_->count foreach @details;
 
     my %items = map { $_->id => $_ } $order->items;
+
+    my $handle = $self->_handle;
+
+    # Purchase dates look like 2010-01-01T12:12:00-08:00
+    # Remove everything after and including the 'T'
+    my $purchase_date = $order->attr_value('purchase_date');
+    $purchase_date =~ s/T.*$//;
+
+    $handle->printf("%s order number %s on %s\n", $source, $order_number, $purchase_date);
+    $handle->printf("%-30s box number:            weight:      lb       oz   box desc:\n",$order->attr_value('recipient_name'));
+    $handle->printf("%-30s\n", $order->attr_value('ship_address_1'));
+    $handle->printf("%-30s phone: %s  Invoice num:\n", $order->attr_value('ship_address_2'), $order->attr_value('ship_phone'));
+    $handle->printf("%-30s\n", $order->attr_value('ship_address_3')) if ($order->attr_value('ship_address_3'));
+
+    $handle->printf("%s, %s %s %s\n",
+                        $order->attr_value('ship_city'),
+                        $order->attr_value('ship_state'),
+                        $order->attr_value('ship_zip'),
+                        $order->attr_value('ship_country'),
+                      );
+
+    my $items_count = 0;
+    $items_count += $_->count foreach $order->item_details;
+    $handle->print(abs($items_count) . " total items:\n");
 
     my $shipping_total = 0;
     my $money_total = 0;
@@ -261,48 +279,26 @@ sub print_order {
                                                             item_id  => $item->id))[0];
 
         my $item_price =  $item_detail->attr_value('item_price');
-        push @items_strings,
-             sprintf("\t(%3s) %3s %-10s \$%-6.2f         %-50s %s",
-                     abs($order->count_for_item($item)),
-                     $self->_is_item_short_for_order($item,$order) ? 'OUT' : '',
-                     $item->sku,
-                     $item_price,
-                     $item->desc,
-                     $location || '',
-                   );
+        $handle->printf("\t(%3s) %3s %-10s \$%-6.2f         %-50s %s\n",
+                        abs($order->count_for_item($item)),
+                        $self->_is_item_short_for_order($item,$order) ? 'OUT' : '',
+                        $item->sku,
+                        $item_price,
+                        $item->desc,
+                        $location || '',
+                      );
         $shipping_total += $item_detail->attr_value('shipping_price');
         $money_total += $item_price;
     }
     $money_total += $shipping_total;
 
-    # Purchase dates look like 2010-01-01T12:12:00-08:00
-    # Remove everything after and including the 'T'
-    my $purchase_date = $order->attr_value('purchase_date');
-    $purchase_date =~ s/T.*$//;
-
-    push @text, sprintf("%s order number %s on %s", $source, $order_number, $purchase_date);
-    push @text, sprintf("%-30s box number:            weight:      lb       oz   box desc:",$order->attr_value('recipient_name'));
-    push @text, sprintf("%-30s", $order->attr_value('ship_address_1'));
-    push @text, sprintf("%-30s phone: %s  Invoice num:", $order->attr_value('ship_address_2'), $order->attr_value('ship_phone'));
-    push @text, sprintf("%-30s", $order->attr_value('ship_address_3')) if ($order->attr_value('ship_address_3'));
-
-    push @text, sprintf("%s, %s %s %s",
-                        $order->attr_value('ship_city'),
-                        $order->attr_value('ship_state'),
-                        $order->attr_value('ship_zip'),
-                        $order->attr_value('ship_country'),
-                      );
-
-    push @text, abs($items_count) . " total items:";
-
-    push @text, @items_strings;
 
     my $ship_service = $order->attr_value('ship_service_level');
     $ship_service = uc($ship_service) if (lc($ship_service) eq 'expedited');
-    push @text, sprintf(" " x 30 . "%s shipping \$%-6.2f" . " " x 20 . "Total \$%-6.2f",
+    $handle->printf(" " x 30 . "%s shipping \$%-6.2f" . " " x 20 . "Total \$%-6.2f\n",
                         $ship_service, $shipping_total, $money_total);
 
-    $self->_handle->print(join("\n", @text),"\n", '-' x 80, "\n");
+    $handle->print("\n". '-' x 80, "\n");
 }
         
 
@@ -355,20 +351,50 @@ sub next_line {
 sub print_order {
     my($self,$order) = @_;
 
-    my @text;
-
     my $source = $order->source;
     my $order_number = $order->order_number;
-    my @details = $order->item_details;
-
-    my $items_count = 0;
-    $items_count += $_->count foreach @details;
 
     my %items = map { $_->id => $_ } $order->items;
 
+    my $handle = $self->_handle;
+    my $lines_needed = 9 + scalar(keys %items);  # Each order record needs 9 lines, plus one line for each item
+    my $lines_left = int(($handle->y - $handle->margin_bottom) / $handle->line_height);
+    if ($lines_left <= $lines_needed) {
+        $handle->next_page();
+    }
+
+    # Purchase dates look like 2010-01-01T12:12:00-08:00
+    # Remove everything after and including the 'T'
+    my $purchase_date = $order->attr_value('purchase_date');
+    $purchase_date =~ s/T.*$//;
+
+    $handle->text(sprintf("%s order number %s on %s", $source, $order_number, $purchase_date));
+    $handle->next_line();
+    $handle->text(sprintf("%-30s box number:            weight:      lb       oz   box desc:",$order->attr_value('recipient_name')));
+    $handle->next_line();
+    $handle->text(sprintf("%-30s", $order->attr_value('ship_address_1')));
+    $handle->next_line();
+    $handle->text(sprintf("%-30s phone: %s  Invoice num:", $order->attr_value('ship_address_2'), $order->attr_value('ship_phone')));
+    $handle->next_line();
+    $handle->text(sprintf("%-30s", $order->attr_value('ship_address_3'))) if ($order->attr_value('ship_address_3'));
+    $handle->next_line();
+
+    $handle->text(sprintf("%s, %s %s %s",
+                        $order->attr_value('ship_city'),
+                        $order->attr_value('ship_state'),
+                        $order->attr_value('ship_zip'),
+                        $order->attr_value('ship_country'),
+                      ));
+    $handle->next_line();
+
+    my $items_count = 0;
+    $items_count += $_->count foreach $order->item_details;
+    $handle->text(abs($items_count) . " total items:");
+    $handle->next_line();
+
+    # All the line items....
     my $shipping_total = 0;
     my $money_total = 0;
-    my @items_strings;
     foreach my $item ( values %items ) {
         my $location = $item->attr_value('location','warehouse');
         # We need the detail record to get some of its attributes.
@@ -377,7 +403,7 @@ sub print_order {
                                                             item_id  => $item->id))[0];
 
         my $item_price =  $item_detail->attr_value('item_price');
-        push @items_strings,
+        $handle->text(
              sprintf("\t(%3s) %3s %-10s \$%-6.2f         %-50s %s",
                      abs($order->count_for_item($item)),
                      $self->_is_item_short_for_order($item,$order) ? 'OUT' : '',
@@ -385,50 +411,19 @@ sub print_order {
                      $item_price,
                      $item->desc,
                      $location || '',
-                   );
+                   ));
+        $handle->next_line();
         $shipping_total += $item_detail->attr_value('shipping_price');
         $money_total += $item_price;
     }
     $money_total += $shipping_total;
 
-    # Purchase dates look like 2010-01-01T12:12:00-08:00
-    # Remove everything after and including the 'T'
-    my $purchase_date = $order->attr_value('purchase_date');
-    $purchase_date =~ s/T.*$//;
-
-    push @text, sprintf("%s order number %s on %s", $source, $order_number, $purchase_date);
-    push @text, sprintf("%-30s box number:            weight:      lb       oz   box desc:",$order->attr_value('recipient_name'));
-    push @text, sprintf("%-30s", $order->attr_value('ship_address_1'));
-    push @text, sprintf("%-30s phone: %s  Invoice num:", $order->attr_value('ship_address_2'), $order->attr_value('ship_phone'));
-    push @text, sprintf("%-30s", $order->attr_value('ship_address_3')) if ($order->attr_value('ship_address_3'));
-
-    push @text, sprintf("%s, %s %s %s",
-                        $order->attr_value('ship_city'),
-                        $order->attr_value('ship_state'),
-                        $order->attr_value('ship_zip'),
-                        $order->attr_value('ship_country'),
-                      );
-
-    push @text, abs($items_count) . " total items:";
-
-    push @text, @items_strings;
 
     my $ship_service = $order->attr_value('ship_service_level');
     $ship_service = uc($ship_service) if (lc($ship_service) eq 'expedited');
-    push @text, sprintf(" " x 30 . "%s shipping \$%-6.2f" . " " x 20 . "Total \$%-6.2f",
-                        $ship_service, $shipping_total, $money_total);
-
-    my $handle = $self->_handle;
-
-    my $lines_left = int(($handle->y - $handle->margin_bottom) / $handle->line_height);
-    if ($lines_left <= scalar(@text)) {
-        $handle->next_page();
-    }
-
-    foreach my $line ( @text )  {
-        $handle->text($line);
-        $handle->next_line;
-    }
+    $handle->text(sprintf(" " x 30 . "%s shipping \$%-6.2f" . " " x 20 . "Total \$%-6.2f",
+                        $ship_service, $shipping_total, $money_total));
+    $handle->next_line();
 
     # I'm not sure why line() doesn't actually draw a line here...
     $handle->rect(to_x => $handle->width_right,
