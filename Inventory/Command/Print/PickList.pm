@@ -180,6 +180,7 @@ sub text_list_for_order {
     my %items = map { $_->id => $_ } $order->items;
 
     my $shipping_total = 0;
+    my $money_total = 0;
     my @items_strings;
     foreach my $item ( values %items ) {
         my $location = $item->attr_value('location','warehouse');
@@ -188,23 +189,27 @@ sub text_list_for_order {
         my $item_detail = ( Inventory::OrderItemDetail->get(order_id => $order->id,
                                                             item_id  => $item->id))[0];
 
+        my $item_price =  $item_detail->attr_value('item_price');
         push @items_strings,
              sprintf("\t(%3s) %3s %-10s \$%-6.2f         %-50s %s",
                      abs($order->count_for_item($item)),
                      $self->_is_item_short_for_order($item,$order) ? 'OUT' : '',
                      $item->sku,
-                     $item_detail->attr_value('item_price'),  # * count???
+                     $item_price,
                      $item->desc,
                      $location || '',
                    );
         $shipping_total += $item_detail->attr_value('shipping_price');
+        $money_total += $item_price;
     }
+    $money_total += $shipping_total;
 
+    # Purchase dates look like 2010-01-01T12:12:00-08:00
+    # Remove everything after and including the 'T'
+    my $purchase_date = $order->attr_value('purchase_date');
+    $purchase_date =~ s/T.*$//;
 
-    my $ship_service = $order->attr_value('ship_service_level');
-    $ship_service = uc($ship_service) if (lc($ship_service) eq 'expedited');
-    push @text, sprintf("%s order number %s on %s   %s shipping \$%-6.2f",
-                       $source, $order_number, $order->attr_value('purchase_date'), $ship_service, $shipping_total);
+    push @text, sprintf("%s order number %s on %s", $source, $order_number, $purchase_date);
     push @text, sprintf("%-30s box number:            weight:      lb       oz   box desc:",$order->attr_value('recipient_name'));
     push @text, sprintf("%-30s", $order->attr_value('ship_address_1'));
     push @text, sprintf("%-30s phone: %s  Invoice num:", $order->attr_value('ship_address_2'), $order->attr_value('ship_phone'));
@@ -220,7 +225,11 @@ sub text_list_for_order {
     push @text, abs($items_count) . " total items:";
 
     push @text, @items_strings;
-    push @text, sprintf("\n%s shipping \$%-6.2f", $ship_service, $shipping_total);
+
+    my $ship_service = $order->attr_value('ship_service_level');
+    $ship_service = uc($ship_service) if (lc($ship_service) eq 'expedited');
+    push @text, sprintf(" " x 30 . "%s shipping \$%-6.2f" . " " x 20 . "Total \$%-6.2f",
+                        $ship_service, $shipping_total, $money_total);
 
     return @text;
 }

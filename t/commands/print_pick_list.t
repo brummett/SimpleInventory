@@ -12,7 +12,7 @@ use Test::More;
 use File::Temp;
 use above 'Inventory';
 
-plan tests => 34;
+plan tests => 37;
 
 my $dbh = &setup_db();
 
@@ -52,17 +52,20 @@ my $picklist_data = do { local($/); <$fh>};
 my @order_data = split(/--------------------------------------------------------------------------------/, $picklist_data);
 
 like($order_data[0], qr/3 orders to fill/, 'says there are three orders to fill');
-like($order_data[0], qr/amazon order number 111-2222222-3333333.*EXPEDITED/, 'Saw first order number');
+like($order_data[0], qr/amazon order number 111-2222222-3333333/, 'Saw first order number');
+like($order_data[0], qr/EXPEDITED shipping/, 'Says it is expedited shipping');
 like($order_data[0], qr/Chuck Jones/, 'Saw first customer');
 like($order_data[0], qr/2 total items/, 'correct number of total items');
 like($order_data[0], qr/\s2\s.*item two/, 'saw 2 item twos');
 
-like($order_data[1], qr/amazon order number 123-4567890-1234567.*Standard/, 'Saw second order number');
+like($order_data[1], qr/amazon order number 123-4567890-1234567/, 'Saw second order number');
+like($order_data[1], qr/Standard shipping/, 'Says it is standard shipping');
 like($order_data[1], qr/Bob Smith/, 'Saw second customer');
 like($order_data[1], qr/1 total items/, 'correct number of total items');
 like($order_data[1], qr/\s1\s.*item one/, 'saw 1 item one');
 
-like($order_data[2], qr/amazon order number 234-5678901-2345678.*Standard/, 'Saw first order number');
+like($order_data[2], qr/amazon order number 234-5678901-2345678/, 'Saw first order number');
+like($order_data[2], qr/Standard shipping/, 'Says it is standard shipping');
 like($order_data[2], qr/Bob Jones/, 'Saw third customer');
 like($order_data[2], qr/3 total items/, 'correct number of total items');
 like($order_data[2], qr/\s1\s.*item one/, 'saw 1 item one');
