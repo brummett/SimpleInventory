@@ -370,11 +370,14 @@ sub print_order {
 
     $handle->text(sprintf("%s order number %s on %s", $source, $order_number, $purchase_date));
     $handle->next_line();
-    $handle->text(sprintf("%-30s box number:            weight:      lb       oz   box desc:",$order->attr_value('recipient_name')));
+    $handle->text($order->attr_value('recipient_name'));
+    $handle->text("box number:            weight:      lb       oz   box desc:", x=> 200);
     $handle->next_line();
-    $handle->text(sprintf("%-30s", $order->attr_value('ship_address_1')));
+    $handle->text($order->attr_value('ship_address_1'));
     $handle->next_line();
-    $handle->text(sprintf("%-30s phone: %s  Invoice num:", $order->attr_value('ship_address_2'), $order->attr_value('ship_phone')));
+    $handle->text($order->attr_value('ship_address_2'));
+    my $phone = $order->attr_value('ship_phone');
+    $handle->text("phone: $phone  Invoice num:", x => 200);
     $handle->next_line();
     $handle->text(sprintf("%-30s", $order->attr_value('ship_address_3'))) if ($order->attr_value('ship_address_3'));
     $handle->next_line();
@@ -420,9 +423,15 @@ sub print_order {
 
 
     my $ship_service = $order->attr_value('ship_service_level');
-    $ship_service = uc($ship_service) if (lc($ship_service) eq 'expedited');
-    $handle->text(sprintf(" " x 30 . "%s shipping \$%-6.2f" . " " x 20 . "Total \$%-6.2f",
-                        $ship_service, $shipping_total, $money_total));
+    my $is_expedited = lc($ship_service) eq 'expedited';
+    $ship_service = uc($ship_service) if ($is_expedited);
+    my ($new_x);
+    (undef,undef,$new_x, undef) = $handle->text("$ship_service shipping", x => 150);
+    $handle->text("$ship_service shipping", x => 150) if ($is_expedited);  # Make it bold
+
+    $handle->text(sprintf(" \$%-6.2f" . " " x 20 . "Total \$%-6.2f",
+                        $shipping_total, $money_total),
+                  x => $new_x);
     $handle->next_line();
 
     # I'm not sure why line() doesn't actually draw a line here...
