@@ -110,9 +110,6 @@ sub execute {
 
         
         for (my $i = 0; $i < $line->{'quantity'}; $i++) {
-if (! $ENV{'INVENTORY_TEST'} and $line->{'quantity'} > 1) {
-die "Quantity greater than 1 on order $order_number order_item_id " . $line->{'order_item_id'} . "!!  Check the item_price column and adjust PrintPickList->print_order!!!"
-}
             my $detail = $order->add_item($item);
             unless ($detail) {
                 $self->error_message("Couldn't add item with sku $sku to order $order_number");

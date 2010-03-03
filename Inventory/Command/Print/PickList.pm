@@ -179,7 +179,7 @@ sub print_order {
                                 abs($order->count_for_item($item)),
                                 $self->_is_item_short_for_order($item,$order) ? 'OUT' : '',
                                 $item->sku,
-                                $item_detail->attr_value('item_price'),  # * count???
+                                $item_detail->attr_value('item_price'),
                                 $item->desc,
                                 $location || '',
                               );
