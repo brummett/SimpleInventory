@@ -11,8 +11,8 @@ class Inventory::Command::Print::PickList {
     is => 'Inventory::Command::Print',
     has => [
         'print' => { is => 'Boolean', default_value => 1, doc => 'Use lpr to print the list after it is generated' },
-        file    => { is => 'String', default_value => 'pick_list.txt', doc => 'filename to save the list to' },
-        _fh     => { is => 'IO::Handle', is_optional => 1, doc => 'handle for the output file' },
+        file    => { is => 'String', default_value => 'pick_list', doc => 'filename to save the list to' },
+        type    => { is => 'String', default_value => 'pdf', valid_values => ['pdf','txt'], doc => 'What kind of output file to create' },
     ],
     doc => 'Generate a pick list based on all the PickList order records in the system',
 };
@@ -20,12 +20,11 @@ class Inventory::Command::Print::PickList {
 sub execute {
     my $self = shift;
 
-    my $output = IO::File->new($self->file, 'w');
+    my $output = $self->_create_output_handle();
     unless ($output) {
-        $self->error_message("Can't open ".$self->file." for writing: $!");
+        $self->error_message("Can't create output file: $!");
         return;
     }
-    $self->_fh($output);
  
     my @orders = Inventory::Order::PickList->get();
     $self->status_message("Generating a list for ".scalar(@orders). " orders");
@@ -75,23 +74,27 @@ sub execute {
     }
 
     if (@filled || @unfilled) {
-        $output->print("\t\t\tPrinted ",scalar(localtime()),"\n");
+        $output->header("Printed ".scalar(localtime()));
     }
 
     if (scalar(@filled)) {
-        $output->print(scalar(@filled), " orders to fill:\n\n");
+        $output->header(scalar(@filled). " orders to fill:");
+        $output->next_line;
         foreach my $order ( @filled ) {
-            $self->print_order($order);
+            my @text = $self->text_list_for_order($order);
+            $output->print_order(@text);
         }
-        $output->print("\n");
     }
 
-    if (scalar(@unfilled)) {
-        $output->print("\n" . '-' x 80 . "\n");
 
-        $output->print("\cL\n", scalar(@unfilled), " orders we can't fill:\n\n");
+    if (scalar(@unfilled)) {
+        $output->next_page();
+
+        $output->header(scalar(@unfilled). " orders we can't fill:");
+        $output->next_line;
         foreach my $order ( @unfilled ) {
-            $self->print_order($order);
+            my @text = $self->text_list_for_order($order);
+            $output->print_order(@text);
         }
     }
 
@@ -107,6 +110,24 @@ sub execute {
     }
     
     return 1;
+}
+
+
+sub _create_output_handle {
+    my $self = shift;
+
+    my $filename = $self->file;
+    my $output_type;
+    if ($self->type eq 'txt') {
+        $output_type = 'Inventory::Command::Print::PickList::Output::Text';
+    } elsif ($self->type eq 'pdf') {
+        $output_type = 'Inventory::Command::Print::PickList::Output::Pdf';
+    } else {
+        $self->error_message("Don't know how to create ".$self->type." type output files");
+    }
+
+    my $output = $output_type->create(filename => $filename);
+    return $output;
 }
 
 
@@ -144,18 +165,10 @@ sub can_fill_order {
     return 1;
 }
 
-sub _is_item_short_for_order {
-    my($self,$item,$order) = @_;
-
-    return $self->{'_short_orders'}->{$order->id}->{$item->id};
-}
-        
-
-
-sub print_order {
+sub text_list_for_order {
     my($self,$order) = @_;
 
-    my $fh = $self->_fh;
+    my @text;
 
     my $source = $order->source;
     my $order_number = $order->order_number;
@@ -167,7 +180,7 @@ sub print_order {
     my %items = map { $_->id => $_ } $order->items;
 
     my $shipping_total = 0;
-    my $items_string = '';
+    my @items_strings;
     foreach my $item ( values %items ) {
         my $location = $item->attr_value('location','warehouse');
         # We need the detail record to get some of its attributes.
@@ -175,43 +188,199 @@ sub print_order {
         my $item_detail = ( Inventory::OrderItemDetail->get(order_id => $order->id,
                                                             item_id  => $item->id))[0];
 
-        $items_string .= sprintf("\t(%3s) %3s %-10s \$%-6.2f\t %-50s %s\n",
-                                abs($order->count_for_item($item)),
-                                $self->_is_item_short_for_order($item,$order) ? 'OUT' : '',
-                                $item->sku,
-                                $item_detail->attr_value('item_price'),
-                                $item->desc,
-                                $location || '',
-                              );
+        push @items_strings,
+             sprintf("\t(%3s) %3s %-10s \$%-6.2f         %-50s %s",
+                     abs($order->count_for_item($item)),
+                     $self->_is_item_short_for_order($item,$order) ? 'OUT' : '',
+                     $item->sku,
+                     $item_detail->attr_value('item_price'),  # * count???
+                     $item->desc,
+                     $location || '',
+                   );
         $shipping_total += $item_detail->attr_value('shipping_price');
     }
 
 
     my $ship_service = $order->attr_value('ship_service_level');
     $ship_service = uc($ship_service) if (lc($ship_service) eq 'expedited');
-    $fh->printf("%s order number %s on %s   %s shipping \$%-6.2f\n",
-                $source, $order_number, $order->attr_value('purchase_date'), $ship_service);
-    $fh->printf("%-30s box number:            weight:          lb         oz\n",$order->attr_value('recipient_name'));
-    $fh->printf("%-30s\n", $order->attr_value('ship_address_1'));
-    $fh->printf("%-30s phone: %s  Invoice num:\n", $order->attr_value('ship_address_2'), $order->attr_value('ship_phone'));
-    $fh->printf("%-30s\n", $order->attr_value('ship_address_3')) if ($order->attr_value('ship_address_3'));
+    push @text, sprintf("%s order number %s on %s   %s shipping \$%-6.2f",
+                       $source, $order_number, $order->attr_value('purchase_date'), $ship_service, $shipping_total);
+    push @text, sprintf("%-30s box number:            weight:      lb       oz   box desc:",$order->attr_value('recipient_name'));
+    push @text, sprintf("%-30s", $order->attr_value('ship_address_1'));
+    push @text, sprintf("%-30s phone: %s  Invoice num:", $order->attr_value('ship_address_2'), $order->attr_value('ship_phone'));
+    push @text, sprintf("%-30s", $order->attr_value('ship_address_3')) if ($order->attr_value('ship_address_3'));
 
-    $fh->printf("%s, %s %s %s\n",
-                $order->attr_value('ship_city'),
-                $order->attr_value('ship_state'),
-                $order->attr_value('ship_zip'),
-                $order->attr_value('ship_country'),
-              );
+    push @text, sprintf("%s, %s %s %s",
+                        $order->attr_value('ship_city'),
+                        $order->attr_value('ship_state'),
+                        $order->attr_value('ship_zip'),
+                        $order->attr_value('ship_country'),
+                      );
 
-    $fh->print(abs($items_count), " total items:\n");
+    push @text, abs($items_count) . " total items:";
 
-    $fh->print($items_string);
-    $fh->printf("\n%s shipping \$%-6.2f\n", $ship_service, $shipping_total);
+    push @text, @items_strings;
+    push @text, sprintf("\n%s shipping \$%-6.2f", $ship_service, $shipping_total);
 
-    $fh->print("\n" . '-' x 80 . "\n");
-
-    return 1;
+    return @text;
 }
 
 
+
+sub _is_item_short_for_order {
+    my($self,$item,$order) = @_;
+
+    return $self->{'_short_orders'}->{$order->id}->{$item->id};
+}
+
+
+
+# Some helper classes for output control
+
+# FIXME - maybe move these to viewers of Orders at some point?
+
+package Inventory::Command::Print::PickList::Output;
+class Inventory::Command::Print::PickList::Output {
+    is_abstract => 1,
+    has => [
+        filename => { is => 'String', doc => 'Filename to write the result to' },
+        _handle  => { doc => 'Underlying object that handles the output, IO::Handle or PDF thingy' },
+    ],
+};
+
+sub create {
+    my $class = shift;
+
+    my $self = $class->SUPER::create(@_);
+    $self->_handle($self->_create_handle());
+
+    return $self;
+}
+
+sub _create_handle {
+    my $class = shift;
+    $class = ref($class) if ref($class);
+
+    Carp::croak("Class $class didn't implement _create_handle");
+}
+
+package Inventory::Command::Print::PickList::Output::Text;
+class Inventory::Command::Print::PickList::Output::Text {
+    is => 'Inventory::Command::Print::PickList::Output',
+};
+
+sub _create_handle {
+    my $self = shift;
+
+    my $filename = $self->filename;
+    my $handle = IO::File->new($filename, 'w');
+    unless ($handle) {
+        Carp::croak("Can't open $filename for writing: $!");
+    }
+    return $handle;
+}
+
+sub header {
+    my($self,$text) = @_;
+
+    $self->_handle->print("\t\t\t$text\n");
+}
+
+sub next_line {
+    my $self = shift;
+
+    $self->_handle->print("\n");
+}
+
+sub print_order {
+    my($self, @text) = @_;
+    $self->_handle->print(join("\n", @text),"\n", '-' x 80, "\n");
+}
+        
+
+sub next_page {
+    my $self = shift;
+    $self->_handle->print("\n" . '-' x 80 . "\n");
+}
+
+sub close {
+    my $self = shift;
+    $self->_handle->close();
+}
+
+
+package Inventory::Command::Print::PickList::Output::Pdf;
+class Inventory::Command::Print::PickList::Output::Pdf {
+    is => 'Inventory::Command::Print::PickList::Output',
+};
+
+sub _create_handle {
+    my $self = shift;
+
+    eval "use PDF::API2::Simple;";
+    if ($@) {
+        Carp::croak("Couldn't load PDF::API2::Simple: $@");
+    }
+
+    my $handle = PDF::API2::Simple->new(file => $self->filename);
+
+    $handle->add_font('Arial');
+    $handle->add_page();
+
+
+    return $handle;
+}
+
+sub header {
+    my($self, $text) = @_;
+
+    my $handle = $self->_handle;
+    $handle->text($text);
+    $handle->next_line;
+}
+
+sub next_line {
+    my $self = shift;
+    $self->_handle->next_line();
+}
+
+sub print_order {
+    my($self,@text) = @_;
+
+    my $handle = $self->_handle;
+
+    my $lines_left = int(($handle->y - $handle->margin_bottom) / $handle->line_height);
+    if ($lines_left <= scalar(@text)) {
+        $handle->next_page();
+    }
+
+    foreach my $line ( @text )  {
+        $handle->text($line);
+        $handle->next_line;
+    }
+
+    # I'm not sure why line() doesn't actually draw a line here...
+    $handle->rect(to_x => $handle->width_right,
+                  to_y => $handle->y+1,
+                  stroke => 'true',
+                  fill => 'true',
+                  stoke_color => 'black',
+                  fill_color => 'black');
+    $handle->x($handle->margin_left);
+
+    $handle->next_line;
+}
+
+
+sub next_page {
+    my $self = shift;
+
+    $self->_handle->add_page();
+}
+
+sub close {
+    my $self = shift;
+
+    $self->_handle->save()
+}
 1;

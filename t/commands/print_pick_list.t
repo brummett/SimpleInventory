@@ -12,7 +12,7 @@ use Test::More;
 use File::Temp;
 use above 'Inventory';
 
-plan tests => 30;
+plan tests => 34;
 
 my $dbh = &setup_db();
 
@@ -35,9 +35,8 @@ is(scalar(@errors), 0, 'There were no warnings');
 
 my($tmpfh,$picklist_file) = File::Temp::tempfile();
 $tmpfh->close;
-#my $picklist_file = '/tmp/pick_list.txt';
-$cmd = Inventory::Command::Print::PickList->create(file => $picklist_file, 'print' => 0);
-ok($cmd, 'Created picklist command');
+$cmd = Inventory::Command::Print::PickList->create(file => $picklist_file, 'print' => 0, type => 'txt');
+ok($cmd, 'Created print picklist command for text');
 $cmd->dump_warning_messages(0);
 $cmd->dump_error_messages(0);
 $cmd->queue_warning_messages(1);
@@ -78,6 +77,25 @@ like($order_data[4], qr/4 total items/, 'correct number of total items');
 like($order_data[4], qr/\sOUT 1\s.*item one/, 'saw item one');
 like($order_data[4], qr/\sOUT 2\s.*item two/, 'saw item two');
 
+
+# Make another temp file for the pdf
+($tmpfh,$picklist_file) = File::Temp::tempfile();
+$tmpfh->close;
+#my $picklist_file = '/tmp/pick_list.pdf';
+$cmd = Inventory::Command::Print::PickList->create(file => $picklist_file, 'print' => 0, type => 'pdf');
+ok($cmd, 'Created print picklist command for pdf');
+$cmd->dump_warning_messages(0);
+$cmd->dump_error_messages(0);
+$cmd->queue_warning_messages(1);
+$cmd->queue_error_messages(1);
+ok($cmd->execute(), 'executed ok');
+
+ok(-f $picklist_file, 'Picklist file was created');
+ok(-s $picklist_file, 'File has non-zero size');
+
+# In the future, maybe use one of the PDF parsers to make sure it looks right
+# I'd imagine that if the text looks OK, then the PDF would, too.  And checking
+# the PDF contents isn't worth much.  We'll see if that's true :)
 
 1;
 sub setup_db {
