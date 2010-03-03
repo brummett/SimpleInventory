@@ -73,6 +73,8 @@ sub execute {
         }
     }
 
+    $output->short_order_data($self->{'_short_orders'});
+
     if (@filled || @unfilled) {
         $output->header("Printed ".scalar(localtime()));
     }
@@ -81,8 +83,7 @@ sub execute {
         $output->header(scalar(@filled). " orders to fill:");
         $output->next_line;
         foreach my $order ( @filled ) {
-            my @text = $self->text_list_for_order($order);
-            $output->print_order(@text);
+            $output->print_order($order);
         }
     }
 
@@ -93,8 +94,7 @@ sub execute {
         $output->header(scalar(@unfilled). " orders we can't fill:");
         $output->next_line;
         foreach my $order ( @unfilled ) {
-            my @text = $self->text_list_for_order($order);
-            $output->print_order(@text);
+            $output->print_order($order);
         }
     }
 
@@ -163,6 +163,77 @@ sub can_fill_order {
     }
 
     return 1;
+}
+
+
+# Some helper classes for output control
+
+# FIXME - maybe move these to viewers of Orders at some point?
+
+package Inventory::Command::Print::PickList::Output;
+class Inventory::Command::Print::PickList::Output {
+    is_abstract => 1,
+    has => [
+        filename => { is => 'String', doc => 'Filename to write the result to' },
+        _handle  => { doc => 'Underlying object that handles the output, IO::Handle or PDF thingy' },
+        short_order_data => { is => 'HASH' },
+    ],
+};
+
+sub create {
+    my $class = shift;
+
+    my $self = $class->SUPER::create(@_);
+    $self->_handle($self->_create_handle());
+
+    return $self;
+}
+
+sub _create_handle {
+    my $class = shift;
+    $class = ref($class) if ref($class);
+
+    Carp::croak("Class $class didn't implement _create_handle");
+}
+
+
+sub _is_item_short_for_order {
+    my($self,$item,$order) = @_;
+
+    my $short = $self->short_order_data;
+    return unless $short;
+
+    return $short->{$order->id}->{$item->id};
+}
+
+
+
+package Inventory::Command::Print::PickList::Output::Text;
+class Inventory::Command::Print::PickList::Output::Text {
+    is => 'Inventory::Command::Print::PickList::Output',
+};
+
+sub _create_handle {
+    my $self = shift;
+
+    my $filename = $self->filename;
+    my $handle = IO::File->new($filename, 'w');
+    unless ($handle) {
+        Carp::croak("Can't open $filename for writing: $!");
+    }
+    return $handle;
+}
+
+sub header {
+    my($self,$text) = @_;
+
+    $self->_handle->print("\t\t\t$text\n");
+}
+
+sub next_line {
+    my $self = shift;
+
+    $self->_handle->print("\n");
 }
 
 sub text_list_for_order {
@@ -236,73 +307,10 @@ sub text_list_for_order {
 
 
 
-sub _is_item_short_for_order {
-    my($self,$item,$order) = @_;
-
-    return $self->{'_short_orders'}->{$order->id}->{$item->id};
-}
-
-
-
-# Some helper classes for output control
-
-# FIXME - maybe move these to viewers of Orders at some point?
-
-package Inventory::Command::Print::PickList::Output;
-class Inventory::Command::Print::PickList::Output {
-    is_abstract => 1,
-    has => [
-        filename => { is => 'String', doc => 'Filename to write the result to' },
-        _handle  => { doc => 'Underlying object that handles the output, IO::Handle or PDF thingy' },
-    ],
-};
-
-sub create {
-    my $class = shift;
-
-    my $self = $class->SUPER::create(@_);
-    $self->_handle($self->_create_handle());
-
-    return $self;
-}
-
-sub _create_handle {
-    my $class = shift;
-    $class = ref($class) if ref($class);
-
-    Carp::croak("Class $class didn't implement _create_handle");
-}
-
-package Inventory::Command::Print::PickList::Output::Text;
-class Inventory::Command::Print::PickList::Output::Text {
-    is => 'Inventory::Command::Print::PickList::Output',
-};
-
-sub _create_handle {
-    my $self = shift;
-
-    my $filename = $self->filename;
-    my $handle = IO::File->new($filename, 'w');
-    unless ($handle) {
-        Carp::croak("Can't open $filename for writing: $!");
-    }
-    return $handle;
-}
-
-sub header {
-    my($self,$text) = @_;
-
-    $self->_handle->print("\t\t\t$text\n");
-}
-
-sub next_line {
-    my $self = shift;
-
-    $self->_handle->print("\n");
-}
-
 sub print_order {
-    my($self, @text) = @_;
+    my($self, $order) = @_;
+
+    my @text = $self->text_list_for_order($order);
     $self->_handle->print(join("\n", @text),"\n", '-' x 80, "\n");
 }
         
@@ -353,8 +361,81 @@ sub next_line {
     $self->_handle->next_line();
 }
 
+sub text_list_for_order {
+    my($self,$order) = @_;
+
+    my @text;
+
+    my $source = $order->source;
+    my $order_number = $order->order_number;
+    my @details = $order->item_details;
+
+    my $items_count = 0;
+    $items_count += $_->count foreach @details;
+
+    my %items = map { $_->id => $_ } $order->items;
+
+    my $shipping_total = 0;
+    my $money_total = 0;
+    my @items_strings;
+    foreach my $item ( values %items ) {
+        my $location = $item->attr_value('location','warehouse');
+        # We need the detail record to get some of its attributes.
+        # they should all have the same attributes stored, so just get the first one
+        my $item_detail = ( Inventory::OrderItemDetail->get(order_id => $order->id,
+                                                            item_id  => $item->id))[0];
+
+        my $item_price =  $item_detail->attr_value('item_price');
+        push @items_strings,
+             sprintf("\t(%3s) %3s %-10s \$%-6.2f         %-50s %s",
+                     abs($order->count_for_item($item)),
+                     $self->_is_item_short_for_order($item,$order) ? 'OUT' : '',
+                     $item->sku,
+                     $item_price,
+                     $item->desc,
+                     $location || '',
+                   );
+        $shipping_total += $item_detail->attr_value('shipping_price');
+        $money_total += $item_price;
+    }
+    $money_total += $shipping_total;
+
+    # Purchase dates look like 2010-01-01T12:12:00-08:00
+    # Remove everything after and including the 'T'
+    my $purchase_date = $order->attr_value('purchase_date');
+    $purchase_date =~ s/T.*$//;
+
+    push @text, sprintf("%s order number %s on %s", $source, $order_number, $purchase_date);
+    push @text, sprintf("%-30s box number:            weight:      lb       oz   box desc:",$order->attr_value('recipient_name'));
+    push @text, sprintf("%-30s", $order->attr_value('ship_address_1'));
+    push @text, sprintf("%-30s phone: %s  Invoice num:", $order->attr_value('ship_address_2'), $order->attr_value('ship_phone'));
+    push @text, sprintf("%-30s", $order->attr_value('ship_address_3')) if ($order->attr_value('ship_address_3'));
+
+    push @text, sprintf("%s, %s %s %s",
+                        $order->attr_value('ship_city'),
+                        $order->attr_value('ship_state'),
+                        $order->attr_value('ship_zip'),
+                        $order->attr_value('ship_country'),
+                      );
+
+    push @text, abs($items_count) . " total items:";
+
+    push @text, @items_strings;
+
+    my $ship_service = $order->attr_value('ship_service_level');
+    $ship_service = uc($ship_service) if (lc($ship_service) eq 'expedited');
+    push @text, sprintf(" " x 30 . "%s shipping \$%-6.2f" . " " x 20 . "Total \$%-6.2f",
+                        $ship_service, $shipping_total, $money_total);
+
+    return @text;
+}
+
+
+
 sub print_order {
-    my($self,@text) = @_;
+    my($self,$order) = @_;
+
+    my @text = $self->text_list_for_order($order);
 
     my $handle = $self->_handle;
 
