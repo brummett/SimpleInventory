@@ -47,7 +47,9 @@ And others.  Try 'bin/inv --help' to get a list.
 
 Prerequsites:
 The big prerequsite is the UR Objects ORM.  http://www.urobject.org/ or
-through CPAN.  
+through CPAN.  It has a number of prerequsites of its own.
 
 WWW::Mechanize is used by some of the ZenCart interface commands.
 
+PDF::API2, PDF::API2::Simple, GD and GD::Barcode are used by the 
+PDF picklist printer command (inv print pick-list --type pdf)

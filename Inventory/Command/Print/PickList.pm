@@ -325,6 +325,11 @@ sub _create_handle {
     if ($@) {
         Carp::croak("Couldn't load PDF::API2::Simple: $@");
     }
+    eval "use GD::Barcode;";
+    if ($@) {
+        Carp::croak("Couldn't load GD::Barcode: $@");
+    }
+
 
     my $handle = PDF::API2::Simple->new(file => $self->filename);
 
@@ -357,11 +362,19 @@ sub print_order {
     my %items = map { $_->id => $_ } $order->items;
 
     my $handle = $self->_handle;
-    my $lines_needed = 9 + scalar(keys %items);  # Each order record needs 9 lines, plus one line for each item
+    my $lines_needed = 11 + scalar(keys %items);  # Each order record needs 11 lines, plus one line for each item
     my $lines_left = int(($handle->y - $handle->margin_bottom) / $handle->line_height);
     if ($lines_left <= $lines_needed) {
         $handle->next_page();
     }
+
+    my $barcode = GD::Barcode->new('Code39', $order_number);
+    my($bar_fh,$barcode_file) = File::Temp::tempfile(SUFFIX => '.png');
+    $bar_fh->print($barcode->plot(Height => $handle->line_height, NoText => 1)->png);
+    $bar_fh->close();
+    $handle->image($barcode_file, x => 125, height => $handle->line_height);
+    $handle->x($handle->margin_left);
+    $handle->next_line();
 
     # Purchase dates look like 2010-01-01T12:12:00-08:00
     # Remove everything after and including the 'T'
@@ -443,6 +456,7 @@ sub print_order {
                   fill_color => 'black');
     $handle->x($handle->margin_left);
 
+    $handle->next_line;
     $handle->next_line;
 }
 
