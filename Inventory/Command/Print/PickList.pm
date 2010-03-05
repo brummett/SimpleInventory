@@ -329,6 +329,17 @@ sub _create_handle {
     if ($@) {
         Carp::croak("Couldn't load GD::Barcode: $@");
     }
+    eval "use PDF::Reuse";
+    if ($@) {
+        Carp::croak("Couldn't load PDF::Reuse: $@");
+    }
+
+
+    eval "use PDF::Reuse::Barcode";
+    if ($@) {
+        Carp::croak("Couldn't load PDF::Reuse::Barcode: $@");
+    }
+
 
 
     my $handle = PDF::API2::Simple->new(file => $self->filename);
@@ -368,21 +379,27 @@ sub print_order {
         $handle->next_page();
     }
 
-    my $barcode = GD::Barcode->new('Code39', $order_number);
-    my($bar_fh,$barcode_file) = File::Temp::tempfile(SUFFIX => '.png');
-    $bar_fh->print($barcode->plot(Height => $handle->line_height, NoText => 1)->png);
-    $bar_fh->close();
-    $handle->image($barcode_file, x => 125, height => $handle->line_height);
-    $handle->x($handle->margin_left);
-    $handle->next_line();
+    my($bar_fh,$barcode_file) = File::Temp::tempfile(SUFFIX => '.pdf');
+    $bar_fh->close;
+    prFile($barcode_file);
+    PDF::Reuse::Barcode::Code39(x => 1, y => 1, value => '*'.$order_number.'*', hide_asterisk => 1);
+    prEnd();
 
     # Purchase dates look like 2010-01-01T12:12:00-08:00
     # Remove everything after and including the 'T'
     my $purchase_date = $order->attr_value('purchase_date');
     $purchase_date =~ s/T.*$//;
 
-    $handle->text(sprintf("%s order number %s on %s", $source, $order_number, $purchase_date));
+    #$handle->text(sprintf("%s order number %s on %s", $source, $order_number, $purchase_date));
     $handle->next_line();
+    my ($new_x);
+    (undef,undef,$new_x, undef) = $handle->text("$source order on $purchase_date  Order number: ");
+    
+    $handle->next_line();
+    $handle->image($barcode_file, x => $new_x + 15, height => $handle->line_height);
+    $handle->x($handle->margin_left);
+    $handle->next_line();
+
     $handle->text($order->attr_value('recipient_name'));
     $handle->text("box number:            weight:      lb       oz   box desc:", x=> 200);
     $handle->next_line();
