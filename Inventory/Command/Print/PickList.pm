@@ -455,7 +455,6 @@ sub print_order {
     my $ship_service = $order->attr_value('ship_service_level');
     my $is_expedited = lc($ship_service) eq 'expedited';
     $ship_service = uc($ship_service) if ($is_expedited);
-    my ($new_x);
     (undef,undef,$new_x, undef) = $handle->text("$ship_service shipping", x => 150);
     $handle->text("$ship_service shipping", x => 150) if ($is_expedited);  # Make it bold
 
