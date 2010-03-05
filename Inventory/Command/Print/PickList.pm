@@ -177,7 +177,7 @@ class Inventory::Command::Print::PickList::Output {
     has => [
         filename => { is => 'String', doc => 'Filename to write the result to' },
         _handle  => { doc => 'Underlying object that handles the output, IO::Handle or PDF thingy' },
-        short_order_data => { is => 'HASH' },
+        short_order_data => { is => 'HASH', is_optional => 1 },
     ],
 };
 
