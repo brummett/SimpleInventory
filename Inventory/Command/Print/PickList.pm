@@ -5,6 +5,7 @@ use warnings;
 
 use Inventory;
 
+use File::Temp;
 use IO::File;
 
 class Inventory::Command::Print::PickList {
