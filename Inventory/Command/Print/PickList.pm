@@ -377,7 +377,7 @@ sub print_order {
     my $lines_needed = 11 + scalar(keys %items);  # Each order record needs 11 lines, plus one line for each item
     my $lines_left = int(($handle->y - $handle->margin_bottom) / $handle->line_height);
     if ($lines_left <= $lines_needed) {
-        $handle->next_page();
+        $handle->add_page();
     }
 
     my($bar_fh,$barcode_file) = File::Temp::tempfile(SUFFIX => '.pdf');
