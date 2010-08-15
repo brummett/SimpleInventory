@@ -34,7 +34,7 @@ sub execute {
         }
     }
 
-    $self->status_message("Changing ".scalar(@items)." to active");
+    $self->status_message("Changing ".scalar(@items)." to inactive");
     foreach my $item ( @items ) {
         if(! $item->active) {
             $self->warning_message("Item with sku ".$item->sku." is already inactive");
