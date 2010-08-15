@@ -69,7 +69,7 @@ CREATE TABLE dd_table (
 INSERT INTO "dd_table" VALUES('Inventory::DataSource::Inventory','','ITEM_ATTRIBUTE','TABLE','entity',NULL,'2009-12-21 21:57:30',NULL);
 INSERT INTO "dd_table" VALUES('Inventory::DataSource::Inventory','','ITEM','TABLE','entity',NULL,'2010-08-15 18:43:04',NULL);
 INSERT INTO "dd_table" VALUES('Inventory::DataSource::Inventory','','ORDER_CLASS','TABLE','validation item',NULL,'2009-12-21 21:57:30',NULL);
-INSERT INTO "dd_table" VALUES('Inventory::DataSource::Inventory','','ORDERS','TABLE','entity',NULL,'2010-08-15 18:43:03',NULL);
+INSERT INTO "dd_table" VALUES('Inventory::DataSource::Inventory','','ORDERS','TABLE','entity',NULL,'2010-08-15 18:57:27',NULL);
 INSERT INTO "dd_table" VALUES('Inventory::DataSource::Inventory','','ORDER_ITEM_DETAIL','TABLE','entity',NULL,'2010-01-03 15:43:19',NULL);
 INSERT INTO "dd_table" VALUES('Inventory::DataSource::Inventory','','ORDER_ITEM_DETAIL_ATTRIBUTE','TABLE','entity',NULL,'2010-01-03 15:43:20',NULL);
 INSERT INTO "dd_table" VALUES('Inventory::DataSource::Inventory','','ORDER_ATTRIBUTES','TABLE','entity',NULL,'2010-01-03 16:33:21',NULL);
@@ -117,7 +117,6 @@ INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','SETT
 INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','SETTINGS','VALUE','varchar',NULL,'Y','2010-01-17 16:04:59','');
 INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','SETTINGS','SETTING_ID','integer',NULL,'N','2010-01-17 16:04:59','');
 INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','ITEM','ACTIVE','bool',NULL,'N','2010-08-15 18:43:04','');
-INSERT INTO "dd_table_column" VALUES('Inventory::DataSource::Inventory','','ORDERS','CONFIRMED','bool',NULL,'Y','2010-08-15 18:43:03','');
 CREATE TABLE dd_unique_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,

@@ -25,7 +25,6 @@ class Inventory::Order {
         source            => { is => 'varchar', is_optional => 1, 
                                doc => 'Where the order came from (Amazon, Web, etc)' },
         attributes        => { is => 'Inventory::OrderAttribute', reverse_as => 'order', is_many => 1 },
-        confirmed         => { is => 'bool', is_optional => 1 },
     ],
     unique_constraints => [
         { properties => [qw/order_class order_number/], sql => 'SQLITE_AUTOINDEX_ORDERS_1' },
