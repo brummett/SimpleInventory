@@ -84,7 +84,7 @@ like($order_data[4], qr/\sOUT 2\s.*item two/, 'saw item two');
 # Make another temp file for the pdf
 ($tmpfh,$picklist_file) = File::Temp::tempfile();
 $tmpfh->close;
-#my $picklist_file = '/tmp/pick_list.pdf';
+my $picklist_file = '/tmp/pick_list.pdf';
 $cmd = Inventory::Command::Print::PickList->create(file => $picklist_file, 'print' => 0, type => 'pdf');
 ok($cmd, 'Created print picklist command for pdf');
 $cmd->dump_warning_messages(0);
