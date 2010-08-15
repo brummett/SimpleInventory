@@ -11,14 +11,17 @@ class Inventory::Item {
         item_id => { is => 'integer' },
     ],
     has => [
-        barcode => { is => 'varchar' },
-        desc    => { is => 'varchar', is_optional => 1 },
-        sku     => { is => 'varchar' },
-        count   => { is => 'Number', is_calculated => 1 },
-        active  => { is => 'Boolean', default_value => 1 },
-
+        barcode            => { is => 'varchar' },
+        desc               => { is => 'varchar', is_optional => 1 },
+        sku                => { is => 'varchar' },
+        count              => { is => 'Number', is_calculated => 1 },
+        active             => { is => 'bool', default_value => 1 },
         order_item_details => { is => 'Inventory::OrderItemDetail', reverse_as => 'item', is_many => 1 },
         orders             => { is => 'Inventory::Order', via => 'order_item_details', to => 'order', is_many => 1 },
+    ],
+    unique_constraints => [
+        { properties => [qw/barcode/], sql => 'SQLITE_AUTOINDEX_ITEM_1' },
+        { properties => [qw/sku/], sql => 'SQLITE_AUTOINDEX_ITEM_2' },
     ],
     schema_name => 'Inventory',
     data_source => 'Inventory::DataSource::Inventory',
