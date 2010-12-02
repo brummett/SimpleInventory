@@ -77,7 +77,7 @@ sub resolve_order_number {
 }
 
 
-sub get_one_barcode {
+sub get_barcode_from_user {
     my $self = shift;
 
     if (my $fh = $self->_fh) {
@@ -85,7 +85,7 @@ sub get_one_barcode {
         chomp $line if ($line and length($line));
         return $line;
     } else {
-        return $self->SUPER::get_one_barcode();
+        return $self->SUPER::get_barcode_from_user();
     }
 }
 

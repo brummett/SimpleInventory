@@ -169,7 +169,7 @@ sub orders_report_on_items {
     }
 }
 
-sub get_one_barcode {
+sub get_barcode_from_user {
     my($self) = @_;
 
     # FIXME - the input barcode should probably be a property
@@ -185,7 +185,7 @@ sub scan_barcodes_for_order {
     SCANNING_ITEMS:
     while(1) {
         print "Scan: " unless ($ENV{'INVENTORY_TEST'});
-        my $barcode = $self->get_one_barcode;
+        my $barcode = $self->get_barcode_from_user;
         last SCANNING_ITEMS unless $barcode;
         $barcode =~ s/^\s+//;
         $barcode =~ s/\s+$//;
