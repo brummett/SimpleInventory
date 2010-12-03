@@ -9,6 +9,7 @@ class Inventory::Order {
     type_name => 'order',
     table_name => 'ORDERS',
     subclassify_by => 'order_class',
+    is_abstract => 1,
     id_by => [
         order_id => { is => 'integer' },
     ],
