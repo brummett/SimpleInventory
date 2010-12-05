@@ -5,26 +5,27 @@ use warnings;
 
 use Inventory;
 
+use File::Temp;
+
 class Inventory::DataSource::Inventory {
     is => [ 'UR::DataSource::SQLite', 'UR::Singleton' ],
 };
 
-#sub server { '/Users/abrummet/git/inventory2/Inventory/DataSource/Inventory.sqlite3' }
 
 # The schema_path should always be the official, installed one.  But the 
 # active DB can either be the real DB or a test DB
 my($database_file_path,$schema_path);
-sub _database_file_path {
+sub server {
     unless ($database_file_path) {
         my $self = shift;
 
         if ($ENV{'INVENTORY_TEST'}) {
-            $database_file_path = $self->SUPER::_database_file_path;
+            $database_file_path = $self->SUPER::server;
             $schema_path = $self->SUPER::_schema_path;
             $database_file_path = "/tmp/inventorydb_$$.sqlite3";
-            unlink $database_file_path if (-f $database_file_path);
+
         } else {
-            $database_file_path = $self->SUPER::_database_file_path(@_);
+            $database_file_path = $self->SUPER::server(@_);
         }
     }
     return $database_file_path;

@@ -46,20 +46,8 @@ foreach my $pick ( @picklists) {
 }
     
 
-##my($tmpfh,$tmpfile) = File::Temp::tempfile();
-##$tmpfh->close;
-#my $tmpfile = '/tmp/pick_list.txt';
-#$cmd = Inventory::Command::PrintPickList->create(file => $tmpfile, 'print' => 0);
-#ok($cmd, 'Created picklist command');
-#$cmd->dump_warning_messages(0);
-#$cmd->dump_error_messages(0);
-#$cmd->queue_warning_messages(1);
-#$cmd->queue_error_messages(1);
-#ok($cmd->execute(), 'executed ok');
-
 my($tmpfh,$amazon_upload_file) = File::Temp::tempfile();
 $tmpfh->close;
-#my $amazon_upload_file = '/tmp/amazon_confirm_upload.txt';
 $cmd = Inventory::Command::ConfirmShipping->create(amazon_file => $amazon_upload_file);
 ok($cmd, 'Created confirm shipping command');
 $cmd->dump_warning_messages(0);
@@ -89,7 +77,7 @@ is(scalar(@messages), 0, 'Saw no warning messages');
 is(scalar(@messages), 3, 'Saw 3 status messages');
 like($messages[0], qr/There are still 1 unconfirmed shipments/, 'Says there is one unconfirmed shipment');
 like($messages[1], qr/123-4567890-1234567/, 'mentioned the right order number');
-like($messages[2], qr/Saving changes/, 'Says it is aving changes');
+like($messages[2], qr/Saving changes/, 'Says it is saving changes');
 
 # Check the contents of the amazon upload file
 ok(-f $amazon_upload_file, 'Amazon upload file exists');
