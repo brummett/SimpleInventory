@@ -14,6 +14,10 @@ sub _order_type_to_create {
     return 'Inventory::Order::PickList';
 }
 
+sub _count_for_order_item_detail {
+    -1;
+}
+
 sub get_order_object {
     my $self = shift;
 
@@ -51,17 +55,21 @@ sub get_barcode_from_user {
     my $self = shift;
 
     my $barcode = $self->SUPER::get_barcode_from_user();
+    my $count = 1;
     if ($barcode =~ m/(\d+)\s+(\S+)/) {
-        my $count = $1;
+        $count = $1;
         $barcode = $2;
-
-        my @barcodes;
-        while ($count--) {
-            push @barcodes, $barcode;
-        }
-        return @barcodes;
     }
-    return $barcode;
+
+    my $item = Inventory::Item->get(sku => $barcode) || Inventory::Item->get(barcode => $barcode);
+    return unless $item;
+    $barcode = $item->barcode;
+    
+    my @barcodes;
+    while ($count--) {
+        push @barcodes, $barcode;
+    }
+    return @barcodes;
 }
 
 
