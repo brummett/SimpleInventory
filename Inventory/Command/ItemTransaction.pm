@@ -181,38 +181,41 @@ sub get_barcode_from_user {
 sub scan_barcodes_for_order {
     my($self,$order) = @_;
 
-    my @barcodes;
+    my @scanned_barcodes;
     SCANNING_ITEMS:
     while(1) {
         print "Scan: " unless ($ENV{'INVENTORY_TEST'});
-        my $barcode = $self->get_barcode_from_user;
-        last SCANNING_ITEMS unless $barcode;
-        $barcode =~ s/^\s+//;
-        $barcode =~ s/\s+$//;
-        # +++ is used in test cases to emulate the user hitting ^D
-        last SCANNING_ITEMS if( ! $barcode or $barcode eq '+++');
+        my @barcode = $self->get_barcode_from_user;
+        last SCANNING_ITEMS unless @barcode;
 
-        # Only check barcodes more than 4 chars...
-        # less than 4 char barcode fields are used for special items and
-        # are obviously not barcodes
-        unless (Inventory::Util->verify_barcode_check_digit($barcode)) {
-            $self->warning_message("Barcode did not scan properly, input line $.");
-            Inventory::Util->play_sound('error');
-            next;
-        }
+        foreach my $barcode ( @barcode ) {
+            $barcode =~ s/^\s+//;
+            $barcode =~ s/\s+$//;
+            # +++ is used in test cases to emulate the user hitting ^D
+            last SCANNING_ITEMS if( ! $barcode or $barcode eq '+++');
+
+            # Only check barcodes more than 4 chars...
+            # less than 4 char barcode fields are used for special items and
+            # are obviously not barcodes
+            unless (Inventory::Util->verify_barcode_check_digit($barcode)) {
+                $self->warning_message("Barcode did not scan properly, input line $.");
+                Inventory::Util->play_sound('error');
+                next;
+            }
         
-        my $item = Inventory::Item->get(barcode => $barcode);
-        if ($item) { 
-            $self->status_message($item->desc);
-        } elsif ($self->should_interrupt_for_new_barcodes) {
-            $self->prompt_for_info_on_barcode($barcode);
-        } else {
-            $self->warning_message("unknown item on line $., will prompt later for details");
+            my $item = Inventory::Item->get(barcode => $barcode);
+            if ($item) { 
+                $self->status_message($item->desc);
+            } elsif ($self->should_interrupt_for_new_barcodes) {
+                $self->prompt_for_info_on_barcode($barcode);
+            } else {
+                $self->warning_message("unknown item on line $., will prompt later for details");
+            }
+            push @scanned_barcodes, $barcode;
         }
-        push @barcodes, $barcode;
     }
     
-    return @barcodes;
+    return @scanned_barcodes;
 }
 
 sub prompt_for_info_on_barcode {
