@@ -79,9 +79,7 @@ sub execute {
         }
     }
 
-    # FIXME This was working before?! :(  Something in UR changed?
-    #my @unconfirmed = Inventory::Order::Sale->get(tracking_number => undef);
-    my @unconfirmed = grep { ! defined($_->tracking_number) }  Inventory::Order::Sale->get();
+    my @unconfirmed = Inventory::Order::Sale->get(tracking_number => undef);
     if (@unconfirmed) {
         $self->status_message("There are still ".scalar(@unconfirmed)." unconfirmed shipments:");
         foreach my $order (@unconfirmed) {
