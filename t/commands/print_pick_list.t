@@ -1,6 +1,16 @@
 #!/usr/bin/perl
 
+use Test::More;
+
 BEGIN {
+    eval "use PDF::API2::Simple";
+    if ($@ =~ qr(Can't locate PDF/API2/Simple.pm in \@INC)) {
+        plan skip_all => 'PDF::API2::Simple does not exist on the system';
+    } else {
+        plan tests => 38;  # This should match the number of keys in %tests below
+        use_ok('PDF::API2::Simple');
+    }
+
     $ENV{'INVENTORY_TEST'} = 1;
 }
 
@@ -8,11 +18,8 @@ BEGIN {
 use strict;
 use warnings;
 
-use Test::More;
 use File::Temp;
 use above 'Inventory';
-
-plan tests => 37;
 
 my $dbh = &setup_db();
 
