@@ -29,7 +29,7 @@ ok(UR::Context->commit(), 'Commit DB');
 my @errors = $cmd->error_messages();
 is(scalar(@errors), 0, 'There were no errors');
 my @warnings = $cmd->warning_messages();
-is(scalar(@errors), 0, 'There were no warnings');
+is(scalar(@warnings), 0, 'There were no warnings');
 
 &check_first_order($dbh);
 &check_second_order($dbh);
