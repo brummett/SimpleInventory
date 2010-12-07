@@ -436,7 +436,9 @@ sub print_order {
     $handle->next_line();
 
     # All the line items....
-    my $shipping_total = 0;
+    my $shipping_total = $order->attr_value('shipping_price');
+    $shipping_total = 0 unless ($shipping_total);  # initialize to 0 if it's not set
+
     my $money_total = 0;
     foreach my $item ( values %items ) {
         my $location = $item->attr_value('location','warehouse');
@@ -456,7 +458,8 @@ sub print_order {
                      $location || '',
                    ));
         $handle->next_line();
-        $shipping_total += $item_detail->attr_value('shipping_price');
+        my $item_shipping_price = $item_detail->attr_value('shipping_price');
+        $shipping_total += $item_shipping_price if ($item_shipping_price);
         $money_total += $item_price;
     }
     $money_total += $shipping_total;
