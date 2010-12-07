@@ -254,9 +254,15 @@ sub print_order {
 
     $handle->printf("%s order number %s on %s\n", $source, $order_number, $purchase_date);
     $handle->printf("%-30s box number:            weight:      lb       oz   box desc:\n",$order->attr_value('recipient_name'));
-    $handle->printf("%-30s\n", $order->attr_value('ship_address_1'));
-    $handle->printf("%-30s phone: %s  Invoice num:\n", $order->attr_value('ship_address_2'), $order->attr_value('ship_phone'));
-    $handle->printf("%-30s\n", $order->attr_value('ship_address_3')) if ($order->attr_value('ship_address_3'));
+    my $ship_addr1 = $order->attr_value('ship_address_1');
+    $handle->printf("%-30s\n", $ship_addr1);
+
+    my $phone = $order->attr_value('ship_phone');
+    my $ship_addr2 = $order->attr_value('ship_address_2');
+    $handle->printf("%-30s phone: %s  Invoice num:\n", $ship_addr2, $phone);
+    
+    my $ship_addr3 = $order->attr_value('ship_addres_3');
+    $handle->printf("%-30s\n", $ship_addr3) if ($ship_addr3);
 
     $handle->printf("%s, %s %s %s\n",
                         $order->attr_value('ship_city'),
