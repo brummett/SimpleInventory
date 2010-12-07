@@ -269,7 +269,9 @@ sub print_order {
     $items_count += $_->count foreach $order->item_details;
     $handle->print(abs($items_count) . " total items:\n");
 
-    my $shipping_total = 0;
+    my $shipping_total = $order->attr_value('shipping_price');
+    $shipping_total = 0 unless ($shipping_total);  # initialize to 0 if it's not set
+
     my $money_total = 0;
     my @items_strings;
     foreach my $item ( values %items ) {
@@ -288,7 +290,8 @@ sub print_order {
                         $item->desc,
                         $location || '',
                       );
-        $shipping_total += $item_detail->attr_value('shipping_price');
+        my $item_shipping_price =  $item_detail->attr_value('shipping_price') || 0;
+        $shipping_total += $item_shipping_price;
         $money_total += $item_price;
     }
     $money_total += $shipping_total;
