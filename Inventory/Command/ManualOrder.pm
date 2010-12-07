@@ -55,6 +55,7 @@ sub get_barcode_from_user {
     my $self = shift;
 
     my $barcode = $self->SUPER::get_barcode_from_user();
+    return unless $barcode;
     my $count = 1;
     if ($barcode =~ m/(\d+)\s+(\S+)/) {
         $count = $1;
@@ -64,12 +65,38 @@ sub get_barcode_from_user {
     my $item = Inventory::Item->get(sku => $barcode) || Inventory::Item->get(barcode => $barcode);
     return unless $item;
     $barcode = $item->barcode;
+
+    while(1) {
+        my $price = $self->_prompt_and_get_answer("Item price");
+        unless (length $price) {
+            $self->warning_message("Please enter a price for this item");
+            next;
+        }
+        $self->{'_prices'}->{$item->id} = $price;  # Hack to save away the price until add_item
+        last;
+    }
     
     my @barcodes;
     while ($count--) {
         push @barcodes, $barcode;
     }
     return @barcodes;
+}
+
+sub add_item {
+    my($self, $item) = @_;
+
+    my $oid = $self->SUPER::add_item($item);
+
+    unless (exists $self->{'_prices'}->{$item->id}) {
+        $self->error_message("No item price info found for item sku ".$item->sku);
+        return;
+    }
+        
+    my $price = $self->{'_prices'}->{$item->id};
+    $oid->add_attribute(name => 'item_price', value => $price);
+
+    return $oid;
 }
 
 
@@ -79,6 +106,7 @@ sub _prompt_and_get_answer {
     $prompt .= " [$dfl_answer]" if $dfl_answer;
     $self->status_message($prompt . ': ');
     my $answer = <STDIN>;
+    chomp($answer);
     unless (length $answer) {
         return $dfl_answer;
     }
