@@ -258,8 +258,9 @@ sub print_order {
     $handle->printf("%-30s\n", $ship_addr1);
 
     my $phone = $order->attr_value('ship_phone');
+    my $email = $order->attr_value('buyer_email');
     my $ship_addr2 = $order->attr_value('ship_address_2');
-    $handle->printf("%-30s phone: %s  Invoice num:\n", $ship_addr2, $phone);
+    $handle->printf("%-30s phone: %s  email: %s  Invoice num:\n", $ship_addr2, $phone, $email);
     
     my $ship_addr3 = $order->attr_value('ship_addres_3');
     $handle->printf("%-30s\n", $ship_addr3) if ($ship_addr3);
@@ -417,7 +418,8 @@ sub print_order {
     $handle->next_line();
     $handle->text($order->attr_value('ship_address_2'));
     my $phone = $order->attr_value('ship_phone');
-    $handle->text("phone: $phone  Invoice num:", x => 200);
+    my $email = $order->attr_value('buyer_email');
+    $handle->text("phone: $phone  email: $email  Invoice num:", x => 200);
     $handle->next_line();
     $handle->text(sprintf("%-30s", $order->attr_value('ship_address_3'))) if ($order->attr_value('ship_address_3'));
     $handle->next_line();
