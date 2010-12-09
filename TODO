@@ -1,15 +1,5 @@
 Email a report about items at 0 or 1.
 
-Add a column to item to flag an item as active/inactive.  Don't include
-inactive items in the above report
-
-Add a flag to orders to mark them as shipped/confirmed.  Set the flag
-after confirm-shipping and then confirm-shipping can warn about how many
-unconfirmed orders are left
-
-Figure out how to print the barcode for orders on the picklist.  Maybe create
-PDFs?  Also, print out packing lists for picklist orders.
-
 Find a way to import orders from ZenCart and generate picklists like for
 Amazon orders
 
