@@ -18,6 +18,11 @@ class Inventory::Command::Print::PickList {
     doc => 'Generate a pick list based on all the PickList order records in the system',
 };
 
+# Higher numerically means sort earlier
+sub _sort_order_objects {
+    return $b->picklist_priority <=> $a->picklist_priority;
+}
+
 sub execute {
     my $self = shift;
 
@@ -30,42 +35,10 @@ sub execute {
     my @orders = Inventory::Order::PickList->get();
     $self->status_message("Generating a list for ".scalar(@orders). " orders");
 
-    my %orders = ( standard => [], expedited => [] );
-    foreach my $order ( @orders ) {
-        if (my $attr = Inventory::OrderAttribute->get(order_id => $order->id, name => 'ship_service_level')) {
-            my $level = lc($attr->value);
-            $orders{$level} ||= [];
-            push @{$orders{$level}}, $order;
-        } else {
-            push @{$orders{'standard'}}, $order;
-        }
-    }
-
-    my $expedited_orders = delete $orders{'expedited'};
-    my $standard_orders = delete $orders{'standard'};
+    @orders = sort _sort_order_objects @orders;
 
     my(@filled, @unfilled);
-    foreach my $order ( @$expedited_orders ) {
-        my $is_filled = $self->can_fill_order($order);
-        if ($is_filled) {
-            push @filled, $order;
-        } else {
-            push @unfilled, $order;
-        }
-    }
-
-    foreach my $key ( keys %orders ) {
-        foreach my $order (@{$orders{$key}}) {
-            my $is_filled = $self->can_fill_order($order);
-            if ($is_filled) {
-                push @filled, $order;
-            } else {
-                push @unfilled, $order;
-            }
-        }
-    }
-
-    foreach my $order ( @$standard_orders ) {
+    foreach my $order (@orders) {
         my $is_filled = $self->can_fill_order($order);
         if ($is_filled) {
             push @filled, $order;
