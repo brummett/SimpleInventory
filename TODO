@@ -6,6 +6,9 @@ Amazon orders
 Purchase Orders - make a list of things we've ordered that can be checked in
 later by receiving a purchase.  Works like a picklist for received things
 
+Integrate with a postage-purchasing program, so as picklist orders are
+filled, it can automaticly arrange for postage with the weight and print
+a label.
 
 ****
 
