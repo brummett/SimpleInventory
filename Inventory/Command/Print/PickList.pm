@@ -57,7 +57,11 @@ sub execute {
         $output->header(scalar(@filled). " orders to fill:");
         $output->next_line;
         foreach my $order ( @filled ) {
-            $output->print_order($order);
+            eval { $output->print_order($order) };
+            if ($@) {
+                $self->error_message("There was a problem printing order number ".$order->order_number.": $@");
+                next;
+            }
         }
     }
 
@@ -68,7 +72,11 @@ sub execute {
         $output->header(scalar(@unfilled). " orders we can't fill:");
         $output->next_line;
         foreach my $order ( @unfilled ) {
-            $output->print_order($order);
+            eval { $output->print_order($order) };
+            if ($@) {
+                $self->error_message("There was a problem printing order number ".$order->order_number.": $@");
+                next;
+            }
         }
     }
 
@@ -363,11 +371,19 @@ sub print_order {
         $handle->add_page();
     }
 
-    my($bar_fh,$barcode_file) = File::Temp::tempfile(SUFFIX => '.pdf');
-    $bar_fh->close;
-    prFile($barcode_file);
-    PDF::Reuse::Barcode::Code39(x => 1, y => 1, value => '*'.$order_number.'*', hide_asterisk => 1);
-    prEnd();
+    my($bar_fh,$barcode_file);
+    my $bc_generated = eval {
+        ($bar_fh,$barcode_file) = File::Temp::tempfile(SUFFIX => '.pdf');
+        $bar_fh->close;
+        prFile($barcode_file);
+        PDF::Reuse::Barcode::Code39(x => 1, y => 1, value => '*'.$order_number.'*', hide_asterisk => 1);
+        prEnd();
+        1;
+    };
+    if (! $bc_generated) {
+        die "Can't convert string '$order_number' into Code39 barcode: $@";
+   }
+        
 
     # Purchase dates look like 2010-01-01T12:12:00-08:00
     # Remove everything after and including the 'T'
