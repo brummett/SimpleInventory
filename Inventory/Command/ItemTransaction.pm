@@ -175,6 +175,7 @@ sub get_barcode_from_user {
     # FIXME - the input barcode should probably be a property
     my $barcode = STDIN->getline();
     chomp $barcode if ($barcode and length($barcode));
+    return () unless (length $barcode);
     return $barcode;
 }
 
