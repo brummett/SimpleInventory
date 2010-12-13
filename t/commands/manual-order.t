@@ -11,7 +11,7 @@ use warnings;
 use Test::More;
 use above 'Inventory';
 
-plan tests => 51;
+plan tests => 64;
 
 my $dbh = &setup_db();
 
@@ -184,6 +184,46 @@ is(scalar(@errors), 0, 'There were no errors');
 is(scalar(@warnings), 0, 'There were no warnings');
 
 
+$cmd = Inventory::Command::ManualOrder->create();
+ok($cmd, 'Instantiated manual order command object');
+$cmd->dump_warning_messages(0);
+$cmd->dump_error_messages(0);
+$cmd->queue_warning_messages(1);
+$cmd->queue_error_messages(1);
+# 999999 item 4444, 2 5555s.  Both are new items
+$data = qq(999999
+web
+Test Testerson
+example5\@example.net
+222 Main St
+
+
+Somewhere
+NY
+22222-3333
+555-123-4567
+
+Standard
+1.99
+
+4444
+12345678
+Some Thingy
+1.29
+2 5555
+234567890
+Some other thing
+1.29
+);
+
+close(STDIN);
+open(STDIN, '<', \$data);
+ok($cmd->execute(), 'executed ok');
+@errors = $cmd->error_messages();
+is(scalar(@errors), 0, 'There were no errors');
+@warnings = $cmd->warning_messages();
+is(scalar(@warnings), 0, 'There were no warnings');
+
 
 ok(UR::Context->commit(), 'Commit DB');
 
@@ -192,6 +232,7 @@ $DB::single=1;
 &check_second_order($dbh);
 &check_third_order($dbh);
 &check_fourth_order($dbh);
+&check_fifth_order($dbh);
 
 #sub get_order_item_id_for_detail_id {
 #    my $detail_id = shift;
@@ -221,18 +262,14 @@ sub check_first_order {
     my $sth = $dbh->prepare('select * from order_item_detail where order_id = ?');
     ok($sth->execute($order_id), 'getting order_item_detail data');
     my %count_for_item;
-    #my %expected_item_id = (2 => 44444444444444);
     my $rows_read = 0;
     while(my $item_data = $sth->fetchrow_hashref()) {
         $rows_read++;
         $count_for_item{$item_data->{'item_id'}}++;
-        #is(get_order_item_id_for_detail_id($item_data->{'order_item_detail_id'}),
-        #   $expected_item_id{$item_data->{'item_id'}},
-        #   'order_item_id attribute matches');
     }
     is($rows_read, 2, 'Read 2 rows from the order_item_detail table');
     is(scalar(keys %count_for_item), 1, 'order_item_detail shows 1 distinct barcode');
-    is($count_for_item{'2'}, 2, 'There were 2 item "2"s');
+    is($count_for_item{'20'}, 2, 'There were 2 item "2"s');
 }
 
 # 123-4567890-1234567 1 item 1
@@ -250,18 +287,14 @@ sub check_second_order {
     my $sth = $dbh->prepare('select * from order_item_detail where order_id = ?');
     ok($sth->execute($order_id), 'getting order_item_detail data');
     my %count_for_item;
-    #my %expected_item_id = (1 => 11111111111111);
     my $rows_read = 0;
     while(my $item_data = $sth->fetchrow_hashref()) {
         $rows_read++;
         $count_for_item{$item_data->{'item_id'}}++;
-    #    is(get_order_item_id_for_detail_id($item_data->{'order_item_detail_id'}),
-    #       $expected_item_id{$item_data->{'item_id'}},
-    #       'order_item_id attribute matches');
     }
     is($rows_read, 1, 'Read 1 row from the order_item_detail table');
     is(scalar(keys %count_for_item), 1, 'order_item_detail shows 1 distinct barcode');
-    is($count_for_item{'1'}, 1, 'There was 1 item "1"s');
+    is($count_for_item{'10'}, 1, 'There was 1 item "1"s');
 }
 
 # 234-5678901-2345678 1 item 1, 2 item 2s
@@ -279,19 +312,15 @@ sub check_third_order {
     my $sth = $dbh->prepare('select * from order_item_detail where order_id = ?');
     ok($sth->execute($order_id), 'getting order_item_detail data');
     my %count_for_item;
-    #my %expected_item_id = (1 => 22222222222222, 2 => 33333333333333);
     my $rows_read = 0;
     while(my $item_data = $sth->fetchrow_hashref()) {
         $rows_read++;
         $count_for_item{$item_data->{'item_id'}}++;
-    #    is(get_order_item_id_for_detail_id($item_data->{'order_item_detail_id'}),
-    #       $expected_item_id{$item_data->{'item_id'}},
-    #       'order_item_id attribute matches');
     }
     is($rows_read, 3, 'Read 3 rows from the order_item_detail table');
     is(scalar(keys %count_for_item), 2, 'order_item_detail shows 2 distinct barcode');
-    is($count_for_item{'1'}, 1, 'There was 1 item "1"s');
-    is($count_for_item{'2'}, 2, 'There were 2 item "2"s');
+    is($count_for_item{'10'}, 1, 'There was 1 item "1"s');
+    is($count_for_item{'20'}, 2, 'There were 2 item "2"s');
 }
 
 # 222-3333333-4444444 1 item 2, 2 items 2s - Unfulfilled: short an item 2
@@ -309,19 +338,42 @@ sub check_fourth_order {
     my $sth = $dbh->prepare('select * from order_item_detail where order_id = ?');
     ok($sth->execute($order_id), 'getting order_item_detail data');
     my %count_for_item;
-    #my %expected_item_id = (1 => 66666666666666, 2 => 55555555555555);
     my $rows_read = 0;
     while(my $item_data = $sth->fetchrow_hashref()) {
         $rows_read++;
         $count_for_item{$item_data->{'item_id'}}++;
-    #    is(get_order_item_id_for_detail_id($item_data->{'order_item_detail_id'}),
-    #       $expected_item_id{$item_data->{'item_id'}},
-    #       'order_item_id attribute matches');
     }
     is($rows_read, 4, 'Read 4 rows from the order_item_detail table');
     is(scalar(keys %count_for_item), 2, 'order_item_detail shows 2 distinct barcode');
-    is($count_for_item{'1'}, 2, 'There was 2 item "1"s');
-    is($count_for_item{'2'}, 2, 'There were 2 item "2"s');
+    is($count_for_item{'10'}, 2, 'There was 2 item "1"s');
+    is($count_for_item{'20'}, 2, 'There were 2 item "2"s');
+}
+
+
+# 999999 item 4444, 2 5555s.  Both are new items
+sub check_fifth_order {
+    my $dbh = shift;
+
+    my $order_data = $dbh->selectrow_hashref("select * from orders where order_number = '999999'");
+    ok($order_data, 'Got an order record for the fifth order');
+    is($order_data->{'order_class'}, 'Inventory::Order::PickList', 'It is of the correct type');
+    is($order_data->{'source'}, 'web', 'It has the correct source');
+    ok($order_data->{'date'}, 'it has a date');
+    my $order_id = $order_data->{'order_id'};
+
+    # The order_item_detail table
+    my $sth = $dbh->prepare('select * from order_item_detail oid join item i on i.item_id = oid.item_id where order_id = ?');
+    ok($sth->execute($order_id), 'getting order_item_detail data');
+    my %count_for_item;
+    my $rows_read = 0;
+    while(my $item_data = $sth->fetchrow_hashref()) {
+        $rows_read++;
+        $count_for_item{$item_data->{'sku'}}++;
+    }
+    is($rows_read, 3, 'Read 3 rows from the order_item_detail table');
+    is(scalar(keys %count_for_item), 2, 'order_item_detail shows 2 distinct barcode');
+    is($count_for_item{'4444'}, 1, 'There was 1 item with sku 4444');
+    is($count_for_item{'5555'}, 2, 'There were 2 item with sku 5555');
 }
 
 
@@ -330,9 +382,9 @@ sub setup_db {
     my $dbh = Inventory::DataSource::Inventory->get_default_handle();
 
     my $sth = $dbh->prepare('insert into item (item_id, barcode, sku, desc) values (?,?,?,?)');
-    foreach my $row ( [1,1,1111,'item one'],
-                      [2,2,2222,'item two'],
-                      [3,3,3333,'item three'],
+    foreach my $row ( [10,1,1111,'item one'],
+                      [20,2,2222,'item two'],
+                      [30,3,3333,'item three'],
                     ) {
         $sth->execute(@$row);
     }
@@ -341,8 +393,8 @@ sub setup_db {
     $sth = $dbh->do("insert into orders (order_id, order_number, order_class) values (-1, 'foo', 'Inventory::Order::InventoryCorrection')");
 
     $sth = $dbh->prepare('insert into order_item_detail (order_item_detail_id,order_id,item_id,count) values (?,?,?,?)');
-    foreach my $row ( [-1,-1,1,3],
-                      [-2,-1,2,5],
+    foreach my $row ( [-1,-1,10,3],
+                      [-2,-1,20,5],
                     ) {
         $sth->execute(@$row);
     }

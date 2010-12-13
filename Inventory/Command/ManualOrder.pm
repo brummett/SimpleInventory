@@ -71,7 +71,11 @@ sub get_barcode_from_user {
     }
 
     my $item = Inventory::Item->get(sku => $barcode) || Inventory::Item->get(barcode => $barcode);
-    return unless $item;
+    unless ($item) {
+        $self->status_message("This is a new item\n\n");
+        my $cmd = Inventory::Command::CreateItem->create(sku => $barcode);
+        $item = $cmd->execute();
+    }
 
     $barcode = $item->barcode;
 
