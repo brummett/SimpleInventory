@@ -30,7 +30,7 @@ sub execute {
         my @items = Inventory::Item->get(%params);
         if (@items > 1) {
             my $param_str = join(', ', map { $_ . ': ' . $params{$_} } keys %params);
-            $self->error_message("Expected to find zer or one item for params $param_str, but got ".scalar(@items));
+            $self->error_message("Expected to find zero or one item for params $param_str, but got ".scalar(@items));
             return;
         }
         $item = shift @items;
