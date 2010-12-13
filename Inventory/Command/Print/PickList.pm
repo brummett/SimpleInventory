@@ -406,8 +406,8 @@ sub print_order {
     $handle->text($order->attr_value('ship_address_1'));
     $handle->next_line();
     $handle->text($order->attr_value('ship_address_2'));
-    my $phone = $order->attr_value('ship_phone');
-    my $email = $order->attr_value('buyer_email');
+    my $phone = $order->attr_value('ship_phone') || '';
+    my $email = $order->attr_value('buyer_email') || '';
     $handle->text("phone: $phone  email: $email  Invoice num:", x => 200);
     $handle->next_line();
     $handle->text(sprintf("%-30s", $order->attr_value('ship_address_3'))) if ($order->attr_value('ship_address_3'));
