@@ -10,13 +10,18 @@ use IO::Handle;
 class Inventory::Command::Lookup {
     is => 'Inventory::Command',
     doc => 'Show details about an item',
+    has => [
+        bare_args => {
+           is_optional => 1,
+           shell_args_position => 1,
+       },
+    ],
 };
  
 sub execute {
     my $self = shift;
 
     my $key = $self->bare_args();
-    $key = join(' ',@$key);
 
     my $prompted = 0;
     unless ($key) {
