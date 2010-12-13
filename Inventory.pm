@@ -3,7 +3,7 @@ package Inventory;
 use warnings;
 use strict;
 
-use UR;
+use UR v0.18;
 
 class Inventory {
     is => [ 'UR::Namespace' ],

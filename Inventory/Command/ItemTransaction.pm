@@ -240,6 +240,7 @@ sub resolve_order_number {
         $order_number = STDIN->getline();
         $order_number =~ s/^\s+//;
         $order_number =~ s/\s+$//;
+        $order_number = uc($order_number);
         $self->order_number($order_number);
     }
     return $order_number;

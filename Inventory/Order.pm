@@ -26,6 +26,15 @@ class Inventory::Order {
         source            => { is => 'varchar', is_optional => 1, 
                                doc => 'Where the order came from (Amazon, Web, etc)' },
         attributes        => { is => 'Inventory::OrderAttribute', reverse_as => 'order', is_many => 1 },
+
+        ship_service_level => { is => 'String', via => 'attributes', to => 'value', where => [name => 'ship_service_level'], is_many => 0 },
+
+        picklist_priority => { calculate_from => ['source','ship_service_level'],
+                               calculate => q(
+                                               return { web => 9, phone => 8, amazon => 7, ebay => 6, other => 1 }->{lc $source}
+                                                       +
+                                                      {secondday => 900, expedited => 800, standard => 700, other => 100}->{lc $ship_service_level}; ),
+                               doc => 'Sort order for filling orders in the picklist; higher means more important' },
     ],
     unique_constraints => [
         { properties => [qw/order_class order_number/], sql => 'SQLITE_AUTOINDEX_ORDERS_1' },

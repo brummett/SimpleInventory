@@ -18,6 +18,11 @@ class Inventory::Command::Print::PickList {
     doc => 'Generate a pick list based on all the PickList order records in the system',
 };
 
+# Higher numerically means sort earlier
+sub _sort_order_objects {
+    return $b->picklist_priority <=> $a->picklist_priority;
+}
+
 sub execute {
     my $self = shift;
 
@@ -30,42 +35,10 @@ sub execute {
     my @orders = Inventory::Order::PickList->get();
     $self->status_message("Generating a list for ".scalar(@orders). " orders");
 
-    my %orders = ( standard => [], expedited => [] );
-    foreach my $order ( @orders ) {
-        if (my $attr = Inventory::OrderAttribute->get(order_id => $order->id, name => 'ship_service_level')) {
-            my $level = lc($attr->value);
-            $orders{$level} ||= [];
-            push @{$orders{$level}}, $order;
-        } else {
-            push @{$orders{'standard'}}, $order;
-        }
-    }
-
-    my $expedited_orders = delete $orders{'expedited'};
-    my $standard_orders = delete $orders{'standard'};
+    @orders = sort _sort_order_objects @orders;
 
     my(@filled, @unfilled);
-    foreach my $order ( @$expedited_orders ) {
-        my $is_filled = $self->can_fill_order($order);
-        if ($is_filled) {
-            push @filled, $order;
-        } else {
-            push @unfilled, $order;
-        }
-    }
-
-    foreach my $key ( keys %orders ) {
-        foreach my $order (@{$orders{$key}}) {
-            my $is_filled = $self->can_fill_order($order);
-            if ($is_filled) {
-                push @filled, $order;
-            } else {
-                push @unfilled, $order;
-            }
-        }
-    }
-
-    foreach my $order ( @$standard_orders ) {
+    foreach my $order (@orders) {
         my $is_filled = $self->can_fill_order($order);
         if ($is_filled) {
             push @filled, $order;
@@ -84,7 +57,11 @@ sub execute {
         $output->header(scalar(@filled). " orders to fill:");
         $output->next_line;
         foreach my $order ( @filled ) {
-            $output->print_order($order);
+            eval { $output->print_order($order) };
+            if ($@) {
+                $self->error_message("There was a problem printing order number ".$order->order_number.": $@");
+                next;
+            }
         }
     }
 
@@ -95,7 +72,11 @@ sub execute {
         $output->header(scalar(@unfilled). " orders we can't fill:");
         $output->next_line;
         foreach my $order ( @unfilled ) {
-            $output->print_order($order);
+            eval { $output->print_order($order) };
+            if ($@) {
+                $self->error_message("There was a problem printing order number ".$order->order_number.": $@");
+                next;
+            }
         }
     }
 
@@ -390,11 +371,19 @@ sub print_order {
         $handle->add_page();
     }
 
-    my($bar_fh,$barcode_file) = File::Temp::tempfile(SUFFIX => '.pdf');
-    $bar_fh->close;
-    prFile($barcode_file);
-    PDF::Reuse::Barcode::Code39(x => 1, y => 1, value => '*'.$order_number.'*', hide_asterisk => 1);
-    prEnd();
+    my($bar_fh,$barcode_file);
+    my $bc_generated = eval {
+        ($bar_fh,$barcode_file) = File::Temp::tempfile(SUFFIX => '.pdf');
+        $bar_fh->close;
+        prFile($barcode_file);
+        PDF::Reuse::Barcode::Code39(x => 1, y => 1, value => '*'.$order_number.'*', hide_asterisk => 1);
+        prEnd();
+        1;
+    };
+    if (! $bc_generated) {
+        die "Can't convert string '$order_number' into Code39 barcode: $@";
+   }
+        
 
     # Purchase dates look like 2010-01-01T12:12:00-08:00
     # Remove everything after and including the 'T'
@@ -417,8 +406,8 @@ sub print_order {
     $handle->text($order->attr_value('ship_address_1'));
     $handle->next_line();
     $handle->text($order->attr_value('ship_address_2'));
-    my $phone = $order->attr_value('ship_phone');
-    my $email = $order->attr_value('buyer_email');
+    my $phone = $order->attr_value('ship_phone') || '';
+    my $email = $order->attr_value('buyer_email') || '';
     $handle->text("phone: $phone  email: $email  Invoice num:", x => 200);
     $handle->next_line();
     $handle->text(sprintf("%-30s", $order->attr_value('ship_address_3'))) if ($order->attr_value('ship_address_3'));
