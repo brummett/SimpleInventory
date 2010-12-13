@@ -28,6 +28,9 @@ sub get_order_object {
     my $order = $self->SUPER::get_order_object();
     return unless $order;
 
+    # If it has changes, it's a new order object and we need to prompt for its attributes
+    return $order unless ($order->__changes__);
+
     unless ($order->source) {
         my $source = $self->_prompt_and_get_answer('order source', 'web');
         $order->source($source);
@@ -40,6 +43,7 @@ sub get_order_object {
             $order->add_attribute(name => $prompt, value => $answer);
         }
     }
+
     my $country = $self->_prompt_and_get_answer('ship_country', 'US');
     $order->add_attribute(name => 'ship_country', value => $country);
 
@@ -68,6 +72,7 @@ sub get_barcode_from_user {
 
     my $item = Inventory::Item->get(sku => $barcode) || Inventory::Item->get(barcode => $barcode);
     return unless $item;
+
     $barcode = $item->barcode;
 
     while(1) {
