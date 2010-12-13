@@ -73,6 +73,9 @@ sub remove_item {
     my @oids_with_count_1 = grep { $_->count == $expected_count } @oids;
     if (@oids_with_count_1) {
         my $oid = shift @oids_with_count_1;
+        foreach my $attr ( $oid->attributes ) {
+            $oid->remove_attribute($attr);
+        }
         $oid->delete();
     } else {
         my $oid = shift @oids;
