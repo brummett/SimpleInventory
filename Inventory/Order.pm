@@ -30,9 +30,10 @@ class Inventory::Order {
         ship_service_level => { is => 'String', via => 'attributes', to => 'value', where => [name => 'ship_service_level'], is_many => 0 },
 
         picklist_priority => { calculate_from => ['source','ship_service_level'],
-                               calculate => q( return { web => 9, phone => 8, amazon => 7, ebay => 6, other => 1 }->{lc $source}
+                               calculate => q(
+                                               return { web => 9, phone => 8, amazon => 7, ebay => 6, other => 1 }->{lc $source}
                                                        +
-                                                      {expedited => 900, standard => 800, other => 100}->{lc $ship_service_level}; ),
+                                                      {secondday => 900, expedited => 800, standard => 700, other => 100}->{lc $ship_service_level}; ),
                                doc => 'Sort order for filling orders in the picklist; higher means more important' },
     ],
     unique_constraints => [
