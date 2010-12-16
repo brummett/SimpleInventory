@@ -109,6 +109,8 @@ sub execute {
         }
 
         
+        # FIXME - it should be storing the item count in the OID rather than multiple OIDs 
+        # all with count 1
         for (my $i = 0; $i < $line->{'quantity'}; $i++) {
             my $detail = $order->add_item($item);
             unless ($detail) {

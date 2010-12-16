@@ -85,6 +85,7 @@ sub get_barcode_from_user {
             $self->warning_message("Please enter a price for this item");
             next;
         }
+        $price = sprintf('%.2f', $price * $count);
         $self->{'_prices'}->{$item->id} = $price;  # Hack to save away the price until add_item
         last;
     }
@@ -99,7 +100,7 @@ sub get_barcode_from_user {
 sub add_item {
     my($self, $item) = @_;
 
-    my $oid = $self->SUPER::add_item($item);
+    my $oid = $self->SUPER::add_item($item);   # FIXME - it should be storing the count here, instead of multiple OIDs all with count 1
 
     unless (exists $self->{'_prices'}->{$item->id}) {
         $self->error_message("No item price info found for item sku ".$item->sku);
