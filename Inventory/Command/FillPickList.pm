@@ -45,19 +45,27 @@ sub get_order_object {
         return;
     }
 
-
     my $order_type = $self->_order_type_to_create();
     my $sale = $order_type->get(order_number => $order_number);
     if ($sale) {
-        $self->error_message("Found a Sale order with order_number!?  That's not right!");
+        $self->warning_message("Found a Sale order with that order number.  Make sure this is really a subsequent shipment!");
+    } else {
+        $sale = $order_type->create(order_number => $order_number, source => $picklist->source);
+        # Copy any attributes from the picklist over to the sale
+        my @attrs = $picklist->attributes();
+        foreach my $attr ( @attrs ) {
+            $sale->add_attribute(name => $attr->name, value => $attr->value);
+        }
+    }
+    $self->_sale($sale);
+
+    my $count = $picklist->item_detail_count;
+    $self->status_message("This PickList has $count items to fill");
+    unless ($count) {
         return;
     }
 
-    # Temporarily, there'll be more than 1 order with the same order_number
-    $sale = $order_type->create(order_number => $order_number, source => $picklist->source);
     $self->status_message("Filling pick list order $order_number");
-
-    $self->_sale($sale);
 
     return $picklist;
 }
@@ -128,12 +136,12 @@ sub orders_report_on_items {
 
     my $order = $self->order;
 
-    $self->error_message("Some items still have not been applied to the sale");
+    $self->warning_message("Some items still have not been applied to the sale");
     foreach my $item ( @$problem_items ) {
-        $self->status_message(sprintf("\tbarcode %s sku %s short %d %s\n",
-                                      $item->barcode, $item->sku, abs($item->count_for_order($order)), $item->desc));
+        $self->warning_message(sprintf("\tbarcode %s sku %s short %d %s\n",
+                                       $item->barcode, $item->sku, abs($item->count_for_order($order)), $item->desc));
     }
-    die "Exiting without saving\n";
+    1;
 }
 
 
@@ -154,13 +162,11 @@ sub execute {
         die "picklist or sale were missing :(.  Exiting without saving\n";
     }
 
-    # Move any attributes from the picklist over to the sale
-    my @attrs = $picklist->attributes();
-    foreach my $attr ( @attrs ) {
-        $attr->order_id($sale->id);
+    my @items = $picklist->items();
+    unless (@items) {
+        $self->status_message("PickList has been completely filled");
+        $picklist->delete();
     }
-    # finally, remove the now empty picklist
-    $picklist->delete();
     
     $self->status_message("Saving changes!");
 

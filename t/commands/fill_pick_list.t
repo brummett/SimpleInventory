@@ -15,20 +15,26 @@ use above 'Inventory';
 
 my $dbh = &setup_db();
 
+# vars reused throughout the test
+my(@statuses, @warnings, @errors, @expected_status, @expected_warnings, @expected_errors);
+my($cmd, $order, $data, $ret, @items);
+
 my $data_fh = \*DATA;
-my $cmd = Inventory::Command::Amazon::ImportOrders->create(file => $data_fh, 'print' => 0);
+$cmd = Inventory::Command::Amazon::ImportOrders->create(file => $data_fh, 'print' => 0);
 ok($cmd, 'Create amazon import order command object to create some orders to fill');
+$cmd->dump_status_messages(0);
 $cmd->dump_warning_messages(0);
 $cmd->dump_error_messages(0);
+$cmd->queue_status_messages(1);
 $cmd->queue_warning_messages(1);
 $cmd->queue_error_messages(1);
 ok($cmd->execute(), 'executed ok');
 
 ok(UR::Context->commit(), 'Commit DB');
 
-my @errors = $cmd->error_messages();
+@errors = $cmd->error_messages();
 is(scalar(@errors), 0, 'There were no errors');
-my @warnings = $cmd->warning_messages();
+@warnings = $cmd->warning_messages();
 is(scalar(@errors), 0, 'There were no warnings');
 
 
@@ -38,24 +44,29 @@ is(scalar(@errors), 0, 'There were no warnings');
 # First try inputting an order number that doesn't exist
 $cmd = Inventory::Command::FillPickList->create();
 ok($cmd, 'created fill picklist command object');
+$cmd->dump_status_messages(0);
 $cmd->dump_warning_messages(0);
 $cmd->dump_error_messages(0);
+$cmd->queue_status_messages(1);
 $cmd->queue_warning_messages(1);
 $cmd->queue_error_messages(1);
-my $data = qq(not_an_order_number
+$data = qq(not_an_order_number
 );
 close(STDIN);
 open(STDIN, '<', \$data);
-my $ret = eval { $cmd->execute };
+$ret = eval { $cmd->execute };
 ok(! $ret, 'Inputting a non-existent order number failed execute');
 is($@, "Filling order failed.  Exiting without saving\n", 'exception was correct');
-my $order =  Inventory::Order->get(order_number => 'not_an_order_number');
+$order =  Inventory::Order->get(order_number => 'not_an_order_number');
 ok(!$order, 'Correctly did not create an order object');
+
+@statuses = $cmd->status_messages;
+is(scalar(@statuses), 0, 'no status messages');
 @warnings = $cmd->warning_messages;
-is(scalar(@warnings), 0, 'generated no warning messages');
+is(scalar(@warnings), 0, 'no warning messages');
 @errors = $cmd->error_messages;
 is(scalar(@errors), 2, '2 error messages');
-my @expected_errors = ("Couldn't find a pick list order with order number NOT_AN_ORDER_NUMBER",
+@expected_errors = ("Couldn't find a pick list order with order number NOT_AN_ORDER_NUMBER",
                        "Could not create order record for this transaction.  Exiting...");
 is_deeply(\@errors, \@expected_errors, 'Error messages are as expected');
 
@@ -67,8 +78,10 @@ is_deeply(\@errors, \@expected_errors, 'Error messages are as expected');
 
 $cmd = Inventory::Command::FillPickList->create();
 ok($cmd, 'Create FillPickList command for order 123-4567890-1234567');
+$cmd->dump_status_messages(0);
 $cmd->dump_warning_messages(0);
 $cmd->dump_error_messages(0);
+$cmd->queue_status_messages(1);
 $cmd->queue_warning_messages(1);
 $cmd->queue_error_messages(1);
 
@@ -85,6 +98,16 @@ is($@, '', 'No exceptions');
 $order = Inventory::Order->get(order_number => '123-4567890-1234567');
 ok($order, 'After filling order, retrieved the order object');
 isa_ok($order, 'Inventory::Order::Sale');
+@items = $order->item_details;
+is(@items, 1, 'Sale has one item assigned to it');
+
+@statuses = $cmd->status_messages;
+@expected_status = ('This PickList has 1 items to fill',
+                       'Filling pick list order 123-4567890-1234567',
+                       'item one',
+                       'PickList has been completely filled',
+                       'Saving changes!');
+is_deeply(\@statuses, \@expected_status, 'Status messages are correct');
 @warnings = $cmd->warning_messages();
 is(scalar(@warnings), 0, 'No warning messages');
 @errors = $cmd->error_messages();
@@ -94,8 +117,10 @@ is(scalar(@errors), 0, 'No error messages');
 # Try filling that same order again
 $cmd = Inventory::Command::FillPickList->create();
 ok($cmd, 'Create another FillPickList command for order 123-4567890-1234567');
+$cmd->dump_status_messages(0);
 $cmd->dump_warning_messages(0);
 $cmd->dump_error_messages(0);
+$cmd->queue_status_messages(1);
 $cmd->queue_warning_messages(1);
 $cmd->queue_error_messages(1);
 
@@ -107,6 +132,9 @@ open(STDIN, '<', \$data);
 $ret = eval { $cmd->execute() };
 ok(! $ret, 'Trying to fill the same order again did not execute');
 is($@, "Filling order failed.  Exiting without saving\n", 'exception was correct');
+
+@statuses = $cmd->status_messages;
+is(scalar(@statuses), 0, 'no status messages');
 @warnings = $cmd->warning_messages;
 is(scalar(@warnings), 0, 'No warning messages');
 @errors = $cmd->error_messages();
@@ -114,6 +142,87 @@ is(scalar(@errors), 2, '2 error messages');
 @expected_errors = ("Couldn't find a pick list order with order number 123-4567890-1234567",
                     "Could not create order record for this transaction.  Exiting...");
 is_deeply(\@errors, \@expected_errors, 'Error messages were correct');
+
+
+# order 111-2222222-3333333 has 2 item 2s.  Fill just one of them for now
+$cmd = Inventory::Command::FillPickList->create();
+ok($cmd, 'Create a FillPickList command for order 111-2222222-3333333');
+$cmd->dump_status_messages(0);
+$cmd->dump_warning_messages(0);
+$cmd->dump_error_messages(0);
+$cmd->queue_status_messages(1);
+$cmd->queue_warning_messages(1);
+$cmd->queue_error_messages(1);
+
+$data = qq(111-2222222-3333333
+2);
+close(STDIN);
+open(STDIN, '<', \$data);
+
+$ret = eval { $cmd->execute() };
+ok($ret, 'Executed Ok');
+is($@, '', 'no exception');
+
+@statuses = $cmd->status_messages;
+@expected_status = ('This PickList has 2 items to fill',
+                    'Filling pick list order 111-2222222-3333333',
+                    'item two',
+                    'Saving changes!');
+is_deeply(\@statuses, \@expected_status, 'Status messages were correct');
+@warnings = $cmd->warning_messages;
+@expected_warnings = ('Some items still have not been applied to the sale',
+                      "\tbarcode 2 sku 2 short 1 item two");
+is(scalar(@warnings), 2, 'two warning messages');
+is_deeply(\@warnings, \@expected_warnings, 'warning messages are correct');
+@errors = $cmd->error_messages();
+is(scalar(@errors), 0, 'No error messages');
+
+$order = Inventory::Order::PickList->get(order_number => '111-2222222-3333333');
+ok($order, 'There is still a picklist for order 111-2222222-3333333');
+@items = $order->item_details;
+is(scalar(@items), 1, 'Picklist has 1 item assigned to it');
+
+$order = Inventory::Order::Sale->get(order_number => '111-2222222-3333333');
+ok($order, 'There is also a sale for order 111-2222222-3333333');
+@items = $order->item_details;
+is(scalar(@items), 1, 'Sale order has 1 item assigned to it');
+
+
+
+# Now fill the rest of the same order
+$cmd = Inventory::Command::FillPickList->create();
+ok($cmd, 'Create a FillPickList command for order 111-2222222-3333333');
+$cmd->dump_status_messages(0);
+$cmd->dump_warning_messages(0);
+$cmd->dump_error_messages(0);
+$cmd->queue_status_messages(1);
+$cmd->queue_warning_messages(1);
+$cmd->queue_error_messages(1);
+
+$data = qq(111-2222222-3333333
+2);
+close(STDIN);
+open(STDIN, '<', \$data);
+
+$ret = eval { $cmd->execute() };
+ok($ret, 'Executed Ok');
+is($@, '', 'no exception');
+
+@statuses = $cmd->status_messages;
+@expected_status = ('This PickList has 1 items to fill',
+                    'Filling pick list order 111-2222222-3333333',
+                    'item two',
+                    'PickList has been completely filled',
+                    'Saving changes!');
+is_deeply(\@statuses, \@expected_status, 'Status messages were correct');
+@warnings = $cmd->warning_messages;
+@expected_warnings = ('Found a Sale order with that order number.  Make sure this is really a subsequent shipment!');
+is(scalar(@warnings), 1, 'one warning messages');
+is_deeply(\@warnings, \@expected_warnings, 'warning messages are correct');
+@errors = $cmd->error_messages();
+is(scalar(@errors), 0, 'No error messages');
+
+
 
 
 
