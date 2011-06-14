@@ -57,8 +57,8 @@ sub get_order_object {
             $sale->add_attribute(name => $attr->name, value => $attr->value);
         }
     }
-    unless ($sale->unconfirmed) {
-        $sale->add_attribute(name => 'unconfirmed', value => 1);
+    if ($sale->confirmed) {
+        $sale->delete_attribute(name => 'confirmed');
     }
     $self->_sale($sale);
 
