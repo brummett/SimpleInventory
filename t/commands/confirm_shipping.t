@@ -12,7 +12,7 @@ use Test::More;
 use File::Temp;
 use above 'Inventory';
 
-plan tests => 19;
+plan tests => 40;
 
 my $dbh = &setup_db();
 
@@ -89,6 +89,78 @@ my @expected = (
 ['234-5678901-2345678','33333333333333','2',$date_str,'UPS','tracking3','ground'],
 );
 &compare_amazon_file_contents($amazon_upload_file, \@expected);
+
+my $order = Inventory::Order->get(order_number => '111-2222222-3333333');
+is($order->tracking_number, 'tracking1', 'Order 111-2222222-3333333 has tracking number tracking1');
+ok($order->confirmed, 'order 111-2222222-3333333 is confirmed');
+
+$order = Inventory::Order->get(order_number => '234-5678901-2345678');
+is($order->tracking_number, 'tracking3', 'Order 234-5678901-2345678 has tracking number tracking3');
+ok($order->confirmed, 'order 234-5678901-2345678 is confirmed');
+
+$order = Inventory::Order->get(order_number => '123-4567890-1234567');
+ok(! $order->tracking_number, 'Order 123-4567890-123456 has no tracking number');
+ok(! $order->confirmed, 'Order 123-4567890-1234567 is still not confirmed');
+
+
+
+
+$cmd = Inventory::Command::ConfirmShipping->create(amazon_file => $amazon_upload_file);
+ok($cmd, 'Created confirm shipping command');
+$cmd->dump_warning_messages(0);
+$cmd->dump_error_messages(0);
+$cmd->queue_warning_messages(1);
+$cmd->queue_error_messages(1);
+$cmd->dump_status_messages(0);
+$cmd->queue_status_messages(1);
+$input = q(111-2222222-3333333
+);
+close(STDIN);
+open(STDIN,'<',\$input);
+ok($cmd->execute(), 'executed ok');
+ @messages = $cmd->error_messages();
+is(scalar(@messages), 1, 'One error message');
+is($messages[0], 'That order has already been confirmed', 'Error message was correct');
+@messages = $cmd->warning_messages();
+is(scalar(@messages), 0, 'Saw no warning messages');
+@messages = $cmd->status_messages();
+is(scalar(@messages), 3, 'Saw 3 status messages');
+like($messages[0], qr/There are still 1 unconfirmed shipments/, 'Says there is one unconfirmed shipment');
+like($messages[1], qr/123-4567890-1234567/, 'mentioned the right order number');
+like($messages[2], qr/Saving changes/, 'Says it is saving changes');
+
+
+
+# re-flag it as unconfirmed as if you shipped backordered items
+$order = Inventory::Order->get(order_number => '111-2222222-3333333');
+ok( $order->remove_attribute(name => 'confirmed', value => 1), 'Removing the confirmed flag from order 111-2222222-3333333');
+$cmd = Inventory::Command::ConfirmShipping->create(amazon_file => $amazon_upload_file);
+ok($cmd, 'Created confirm shipping command');
+$cmd->dump_warning_messages(0);
+$cmd->dump_error_messages(0);
+$cmd->queue_warning_messages(1);
+$cmd->queue_error_messages(1);
+$cmd->dump_status_messages(0);
+$cmd->queue_status_messages(1);
+$input = q(111-2222222-3333333
+secondtracking
+USPS
+priority
+);
+close(STDIN);
+open(STDIN,'<',\$input);
+ok($cmd->execute(), 'executed ok');
+
+$order = Inventory::Order->get(order_number => '111-2222222-3333333');
+my @tracking =  $order->tracking_number;
+is(scalar(@tracking), 2, 'Order 111-2222222-3333333 has 2 tracking numbers');
+is_deeply(\@tracking,
+          ['tracking1', 'secondtracking'],
+          'Tracking numbers are correct');
+ok($order->confirmed, 'Order 111-2222222-3333333 is confirmed');
+
+
+
 
 1;
 

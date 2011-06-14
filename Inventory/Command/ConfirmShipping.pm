@@ -46,9 +46,8 @@ sub execute {
             next;
         }
 
-        my $track_attr = Inventory::OrderAttribute->get(order_id => $order->id, name => 'tracking_number');
-        if ($track_attr) {
-            $self->error_message("That order already has a tracking number: ".$track_attr->value);
+        if ($order->confirmed) {
+            $self->error_message("That order has already been confirmed");
             next;
         }
  
@@ -59,27 +58,28 @@ sub execute {
         }
 
         print "Shipping carrier [USPS]: " unless ($ENV{'INVENTORY_TEST'});
-        my $carrier = <STDIN>;
-        chomp $carrier;
-        $carrier ||= 'USPS';
+        my $carrier_code = <STDIN>;
+        chomp $carrier_code;
+        $carrier_code ||= 'USPS';
  
         print "Shipping method [priority]: " unless ($ENV{'INVENTORY_TEST'});
-        my $method = <STDIN>;
-        chomp $method;
-        $method ||= 'priority';
+        my $ship_method = <STDIN>;
+        chomp $ship_method;
+        $ship_method ||= 'priority';
 
         $order->add_attribute(name => 'tracking_number', value => $tracking_number);
-        $order->add_attribute(name => 'carrier_code', value => $carrier);
-        $order->add_attribute(name => 'ship_method', value => $method);
-        my $date_str = POSIX::strftime("%F", localtime());  # yyyy-mm-dd
-        $order->add_attribute(name => 'ship_date', value => $date_str);
+        $order->add_attribute(name => 'carrier_code', value => $carrier_code);
+        $order->add_attribute(name => 'ship_method', value => $ship_method);
+        my $ship_date = POSIX::strftime("%F", localtime());  # yyyy-mm-dd
+        $order->add_attribute(name => 'ship_date', value => $ship_date);
 
         if ($order->source and $order->source eq 'amazon') {
-            $self->_add_order_to_amazon_file($order);
+            $self->_add_order_to_amazon_file($order, $ship_date, $carrier_code, $tracking_number, $ship_method);
         }
+        $order->add_attribute(name => 'confirmed', value => 1);
     }
 
-    my @unconfirmed = Inventory::Order::Sale->get(tracking_number => undef);
+    my @unconfirmed = Inventory::Order::Sale->get('confirmed false' => 1);
     if (@unconfirmed) {
         $self->status_message("There are still ".scalar(@unconfirmed)." unconfirmed shipments:");
         foreach my $order (@unconfirmed) {
@@ -95,14 +95,14 @@ sub execute {
 
 
 sub _add_order_to_amazon_file {
-    my($self, $order) = @_;
+    my($self, $order, $ship_date, $carrier_code, $tracking_number, $ship_method) = @_;
 
     my $order_number = $order->order_number;
-    my $ship_date = $order->attr_value('ship_date');
-    my $carrier_code = $order->attr_value('carrier_code');
-    my $carrier_name = $order->attr_value('carrier_name') || '';
-    my $tracking_number = $order->attr_value('tracking_number');
-    my $ship_method = $order->attr_value('ship_method');
+    #my $ship_date = $order->attr_value('ship_date');
+    #my $carrier_code = $order->attr_value('carrier_code');
+    my $carrier_name = '';   # always the empty string in our system?    # $order->attr_value('carrier_name') || '';
+    #my $tracking_number = $order->attr_value('tracking_number');
+    #my $ship_method = $order->attr_value('ship_method');
 
     unless ($order_number and $ship_date and $carrier_code and $tracking_number and $ship_method)  {
         $self->error_message("Can't save amazon order result, missing info");
