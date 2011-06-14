@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More tests => 25;
+use Test::More tests => 53;
 
 BEGIN {
     $ENV{'INVENTORY_TEST'} = 1;
@@ -100,6 +100,7 @@ ok($order, 'After filling order, retrieved the order object');
 isa_ok($order, 'Inventory::Order::Sale');
 @items = $order->item_details;
 is(@items, 1, 'Sale has one item assigned to it');
+is($order->unconfirmed, 1, 'Sale order is unconfirmed');
 
 @statuses = $cmd->status_messages;
 @expected_status = ('This PickList has 1 items to fill',
@@ -186,6 +187,7 @@ $order = Inventory::Order::Sale->get(order_number => '111-2222222-3333333');
 ok($order, 'There is also a sale for order 111-2222222-3333333');
 @items = $order->item_details;
 is(scalar(@items), 1, 'Sale order has 1 item assigned to it');
+is($order->unconfirmed, 1, 'Sale order is unconfirmed');
 
 
 
@@ -221,6 +223,15 @@ is(scalar(@warnings), 1, 'one warning messages');
 is_deeply(\@warnings, \@expected_warnings, 'warning messages are correct');
 @errors = $cmd->error_messages();
 is(scalar(@errors), 0, 'No error messages');
+
+$order = Inventory::Order::PickList->get(order_number => '111-2222222-3333333');
+ok(! $order, 'The picklist order object is gone');
+
+$order = Inventory::Order::Sale->get(order_number => '111-2222222-3333333');
+ok($order, 'There is also a sale for order 111-2222222-3333333');
+@items = $order->item_details;
+is(scalar(@items), 2, 'Sale order has 2 items assigned to it');
+is($order->unconfirmed, 1, 'Sale order is unconfirmed');
 
 
 

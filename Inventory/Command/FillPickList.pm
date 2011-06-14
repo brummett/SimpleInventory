@@ -57,6 +57,9 @@ sub get_order_object {
             $sale->add_attribute(name => $attr->name, value => $attr->value);
         }
     }
+    unless ($sale->unconfirmed) {
+        $sale->add_attribute(name => 'unconfirmed', value => 1);
+    }
     $self->_sale($sale);
 
     my $count = $picklist->item_detail_count;

@@ -4,6 +4,9 @@ use Inventory;
 
 class Inventory::Order::Sale {
     is => 'Inventory::Order',
+    has_optional => [
+        unconfirmed       => { is => 'Boolean', via => 'attributes', to => 'value', where => [name => 'unconfirmed'] },
+    ],
     has_many_optional => [
         tracking_number => { is => 'String', via => 'attributes', to => 'value', where => [name => 'tracking_number'] },
     ],
